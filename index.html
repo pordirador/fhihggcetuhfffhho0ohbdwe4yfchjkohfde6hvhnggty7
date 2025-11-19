@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Змейка420</title>
+    <title>Змейка421</title>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
@@ -284,8 +284,7 @@
 </div>
 
 <script>
-    // ========== ИНИЦИАЛИЗАЦИЯ FIREBASE ==========
-    const firebaseConfig = {
+  const firebaseConfig = {
         apiKey: "AIzaSyBfSUiSe_sWYTLEyA38DN2C7xtKL3uwV8E",
         authDomain: "mr-zmeyka.firebaseapp.com",
         databaseURL: "https://mr-zmeyka-default-rtdb.europe-west1.firebasedatabase.app",
@@ -300,9 +299,7 @@
     const db = firebase.database();
     const auth = firebase.auth();
 
-    // ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==========
-    
-    // ЭЛЕМЕНТЫ ИНТЕРФЕЙСА
+    // ========== ЭЛЕМЕНТЫ ИНТЕРФЕЙСА ==========
     const mainMenu = document.getElementById('main-menu');
     const playBtn = document.getElementById('play-btn');
     const leaderboardBtn = document.getElementById('leaderboard-btn');
@@ -332,9 +329,37 @@
     const profileNameInput = document.getElementById('profile-name-input');
     const profileIdSpan = document.getElementById('profile-id');
     const profileSaveBtn = document.getElementById('profile-save-btn');
-    const refreshLeaderboardBtn = document.getElementById('refresh-leaderboard');
-    const closeLeaderboardBtn = document.getElementById('close-leaderboard');
-    const closeHowToPlayBtn = document.getElementById('close-how-to-play');
+
+    // ========== НАСТРОЙКИ ИГРЫ ==========
+    const gridSize = 20;
+    let snake = [];
+    let food = {};
+    let direction = 'none';
+    let nextDirection = 'none';
+    let score = 0;
+    let gameSpeed = 150;
+    let gameLoop;
+    let gameActive = false;
+    let refreshInterval;
+
+    // Текущий пользователь
+    let currentUser = {
+        id: null,
+        display_name: 'Гость'
+    };
+
+    // Настройки профиля
+    let userSettings = {
+        coins: 0,
+        avatar: 1,
+        background: 1,
+        snakeSkin: 1,
+        unlockedItems: {
+            avatars: ["1"],
+            backgrounds: ["1"],
+            snakeSkins: ["1"]
+        }
+    };
 
     // Цены на предметы
     const shopItems = {
@@ -364,340 +389,263 @@
         ]
     };
 
-    // Расширенная палитра цветов
-    const extendedColorPalette = [
-        '#FF5252', '#FF4081', '#E040FB', '#7C4DFF', '#536DFE', '#448AFF',
-        '#40C4FF', '#18FFFF', '#64FFDA', '#69F0AE', '#B2FF59', '#EEFF41',
-        '#FFFF00', '#FFD740', '#FFAB40', '#FF6E40', '#4CAF50', '#8BC34A',
-        '#CDDC39', '#FFEB3B', '#FFC107', '#FF9800', '#FF5722', '#795548',
-        '#9E9E9E', '#607D8B', '#000000', '#FFFFFF'
-    ];
-
-    // ========== НАСТРОЙКИ ИГРЫ ==========
-    const gridSize = 20;
-    let snake = [];
-    let food = {};
-    let direction = 'none';
-    let nextDirection = 'none';
-    let score = 0;
-    let gameSpeed = 150;
-    let gameLoop;
-    let gameActive = false;
-    let refreshInterval;
-    
-    // Текущий пользователь
-    let currentUser = {
-        id: null,
-        display_name: 'Гость'
-    };
-
-    // Настройки профиля
-    let userSettings = {
-        coins: 0,
-        avatar: 1,
-        background: 1,
-        skin: 1,
-        unlockedItems: {
-            avatars: ["1"],
-            backgrounds: ["1"],
-            skins: ["1"]
-        },
-        // Добавляем поля для кастомизации
-        customSnakeColor: null,
-        customSnakeSkin: null,
-        customAvatar: null,
-        customBackground: null
-    };
-
     // ========== ОСНОВНЫЕ ФУНКЦИИ ==========
+    async function init() {
+        console.log("Инициализация игры...");
+        
+        // Настройка обработчиков событий
+        setupEventListeners();
+        
+        // Инициализация размеров canvas
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Инициализация пользователя
+        await identifyUser();
+        
+        // Применяем настройки по умолчанию
+        applyProfileSettings();
+        
+        // Загружаем таблицу лидеров
+        loadLeaderboard(topPlayersList, 5);
+        
+        console.log("Игра инициализирована");
+    }
 
-    // Инициализация цветовой палитры
-    function initColorPalette() {
-        const paletteContainer = document.getElementById('color-palette');
-        if (!paletteContainer) return;
+    function setupEventListeners() {
+        // Основные кнопки
+        playBtn.addEventListener('click', startGame);
+        leaderboardBtn.addEventListener('click', showFullLeaderboard);
+        howToPlayBtn.addEventListener('click', () => howToPlayModal.style.display = 'flex');
+        shopBtn.addEventListener('click', showShopModal);
+        profileBtn.addEventListener('click', showProfileModal);
         
-        paletteContainer.innerHTML = '';
+        // Игровые кнопки
+        restartBtn.addEventListener('click', startGame);
+        menuBtn.addEventListener('click', returnToMenu);
         
-        // Добавляем стандартные цвета
-        extendedColorPalette.forEach((color, index) => {
-            const colorOption = document.createElement('div');
-            colorOption.className = 'color-option';
-            colorOption.style.backgroundColor = color;
-            colorOption.dataset.color = color;
-            colorOption.dataset.id = index + 100; // ID больше 100 для кастомных цветов
-            
-            colorOption.addEventListener('click', function() {
-                selectCustomColor(color, index + 100);
+        // Закрытие модальных окон
+        document.getElementById('close-how-to-play').addEventListener('click', () => howToPlayModal.style.display = 'none');
+        document.getElementById('close-leaderboard').addEventListener('click', () => leaderboardModal.style.display = 'none');
+        document.querySelectorAll('.close-modal-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.closest('.modal').style.display = 'none';
             });
-            
-            paletteContainer.appendChild(colorOption);
         });
+        
+        // Закрытие по клику вне контента
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        });
+        
+        // Вкладки магазина
+        setupShopTabs();
+        
+        // Управление
+        setupControls();
     }
 
-    // Выбор кастомного цвета
-    function selectCustomColor(color, colorId) {
-        // Сохраняем выбранный цвет
-        userSettings.customSnakeColor = color;
-        userSettings.skin = colorId;
-        
-        // Применяем цвет в игре
-        if (gameActive) draw();
-        
-        showToast('Цвет змейки изменен!');
-        
-        // Сохраняем настройки
-        if (currentUser.id && !currentUser.id.startsWith('local_')) {
-            saveProfileSettings();
+    // ========== ПРОФИЛЬ И НАСТРОЙКИ ==========
+    async function identifyUser() {
+        try {
+            const userCredential = await auth.signInAnonymously();
+            const user = userCredential.user;
+            
+            currentUser.id = user.uid;
+            
+            // Загружаем или создаем профиль
+            const userRef = db.ref(`users/${user.uid}`);
+            const snapshot = await userRef.once('value');
+            
+            if (snapshot.exists()) {
+                currentUser.display_name = snapshot.val().display_name;
+            } else {
+                currentUser.display_name = `Игрок ${Math.floor(1000 + Math.random() * 9000)}`;
+                await userRef.set({
+                    display_name: currentUser.display_name,
+                    created: firebase.database.ServerValue.TIMESTAMP
+                });
+            }
+            
+            // Загружаем настройки
+            await loadProfileSettings();
+            
+            updateProfileButton();
+            console.log("Пользователь идентифицирован:", currentUser);
+            
+        } catch (error) {
+            console.error('Ошибка идентификации:', error);
+            setupOfflineUser();
         }
     }
 
-    // Инициализация загрузки файлов
-    function initFileUploads() {
-        // Загрузка скина для змейки
-        const snakeSkinUpload = document.getElementById('snake-skin-upload');
-        const snakeSkinUploadBtn = document.getElementById('snake-skin-upload-btn');
-        const snakeSkinPreview = document.getElementById('snake-skin-preview');
-        const customSkinPreview = document.getElementById('custom-skin-preview');
-        const saveSnakeSkinBtn = document.getElementById('save-snake-skin-btn');
+    async function loadProfileSettings() {
+        if (!currentUser.id) return;
         
-        snakeSkinUploadBtn.addEventListener('click', () => snakeSkinUpload.click());
-        
-        snakeSkinUpload.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    snakeSkinPreview.style.backgroundImage = `url(${e.target.result})`;
-                    snakeSkinPreview.classList.remove('empty');
-                    customSkinPreview.style.backgroundImage = `url(${e.target.result})`;
-                    saveSnakeSkinBtn.style.display = 'block';
+        try {
+            const snapshot = await db.ref(`userSettings/${currentUser.id}`).once('value');
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                userSettings = {
+                    coins: data.coins || 0,
+                    avatar: data.avatar || 1,
+                    background: data.background || 1,
+                    snakeSkin: data.snakeSkin || 1,
+                    unlockedItems: data.unlockedItems || {
+                        avatars: ["1"],
+                        backgrounds: ["1"],
+                        snakeSkins: ["1"]
+                    }
                 };
-                reader.readAsDataURL(file);
             }
-        });
-        
-        saveSnakeSkinBtn.addEventListener('click', async function() {
-            if (userSettings.coins < 10) {
-                showToast('Недостаточно монет!');
-                return;
-            }
-            
-            const file = snakeSkinUpload.files[0];
-            if (!file) {
-                showToast('Сначала выберите изображение');
-                return;
-            }
-            
-            try {
-                // Конвертируем изображение в base64
-                const reader = new FileReader();
-                reader.onload = async function(e) {
-                    const imageData = e.target.result;
-                    
-                    // Сохраняем в userSettings
-                    userSettings.customSnakeSkin = imageData;
-                    userSettings.coins -= 10;
-                    
-                    // Сохраняем в Firebase
-                    await db.ref(`userSettings/${currentUser.id}`).update({
-                        coins: userSettings.coins,
-                        customSnakeSkin: imageData
-                    });
-                    
-                    showToast('Скин сохранен!');
-                    updateCoinsDisplay();
-                    saveSnakeSkinBtn.style.display = 'none';
-                    snakeSkinPreview.classList.add('empty');
-                    snakeSkinPreview.style.backgroundImage = '';
-                    snakeSkinUpload.value = '';
-                };
-                reader.readAsDataURL(file);
-            } catch (error) {
-                console.error('Ошибка сохранения скина:', error);
-                showToast('Ошибка сохранения скина');
-            }
-        });
-        
-        // Загрузка аватара
-        const avatarUpload = document.getElementById('avatar-upload');
-        const avatarUploadBtn = document.getElementById('avatar-upload-btn');
-        const avatarPreview = document.getElementById('avatar-preview');
-        const saveAvatarBtn = document.getElementById('save-avatar-btn');
-        
-        avatarUploadBtn.addEventListener('click', () => avatarUpload.click());
-        
-        avatarUpload.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    avatarPreview.style.backgroundImage = `url(${e.target.result})`;
-                    avatarPreview.classList.remove('empty');
-                    saveAvatarBtn.style.display = 'block';
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-        
-        saveAvatarBtn.addEventListener('click', async function() {
-            if (userSettings.coins < 10) {
-                showToast('Недостаточно монет!');
-                return;
-            }
-            
-            const file = avatarUpload.files[0];
-            if (!file) {
-                showToast('Сначала выберите изображение');
-                return;
-            }
-            
-            try {
-                const reader = new FileReader();
-                reader.onload = async function(e) {
-                    const imageData = e.target.result;
-                    
-                    userSettings.customAvatar = imageData;
-                    userSettings.coins -= 10;
-                    
-                    await db.ref(`userSettings/${currentUser.id}`).update({
-                        coins: userSettings.coins,
-                        customAvatar: imageData
-                    });
-                    
-                    showToast('Аватар сохранен!');
-                    updateCoinsDisplay();
-                    saveAvatarBtn.style.display = 'none';
-                    avatarPreview.classList.add('empty');
-                    avatarPreview.style.backgroundImage = '';
-                    avatarUpload.value = '';
-                };
-                reader.readAsDataURL(file);
-            } catch (error) {
-                console.error('Ошибка сохранения аватара:', error);
-                showToast('Ошибка сохранения аватара');
-            }
-        });
-        
-        // Загрузка фона
-        const backgroundUpload = document.getElementById('background-upload');
-        const backgroundUploadBtn = document.getElementById('background-upload-btn');
-        const backgroundPreview = document.getElementById('background-preview');
-        const saveBackgroundBtn = document.getElementById('save-background-btn');
-        
-        backgroundUploadBtn.addEventListener('click', () => backgroundUpload.click());
-        
-        backgroundUpload.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    backgroundPreview.style.backgroundImage = `url(${e.target.result})`;
-                    backgroundPreview.classList.remove('empty');
-                    saveBackgroundBtn.style.display = 'block';
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-        
-        saveBackgroundBtn.addEventListener('click', async function() {
-            if (userSettings.coins < 10) {
-                showToast('Недостаточно монет!');
-                return;
-            }
-            
-            const file = backgroundUpload.files[0];
-            if (!file) {
-                showToast('Сначала выберите изображение');
-                return;
-            }
-            
-            try {
-                const reader = new FileReader();
-                reader.onload = async function(e) {
-                    const imageData = e.target.result;
-                    
-                    userSettings.customBackground = imageData;
-                    userSettings.coins -= 10;
-                    
-                    await db.ref(`userSettings/${currentUser.id}`).update({
-                        coins: userSettings.coins,
-                        customBackground: imageData
-                    });
-                    
-                    showToast('Фон сохранен!');
-                    updateCoinsDisplay();
-                    saveBackgroundBtn.style.display = 'none';
-                    backgroundPreview.classList.add('empty');
-                    backgroundPreview.style.backgroundImage = '';
-                    backgroundUpload.value = '';
-                    
-                    // Применяем новый фон
-                    applyCustomBackground();
-                };
-                reader.readAsDataURL(file);
-            } catch (error) {
-                console.error('Ошибка сохранения фона:', error);
-                showToast('Ошибка сохранения фона');
-            }
-        });
-    }
-
-    // Применение кастомного фона
-    function applyCustomBackground() {
-        if (userSettings.customBackground) {
-            document.body.style.backgroundImage = `url(${userSettings.customBackground})`;
-            document.body.style.backgroundSize = 'cover';
-            document.body.style.backgroundPosition = 'center';
-            document.body.style.backgroundRepeat = 'no-repeat';
-            document.body.className = ''; // Убираем классы градиентов
-        } else {
-            document.body.style.backgroundImage = '';
-            document.body.className = '';
-            document.body.classList.add(`profile-bg-${userSettings.background}`);
+            applyProfileSettings();
+        } catch (error) {
+            console.error('Ошибка загрузки настроек:', error);
         }
     }
 
-    // Модифицируем функцию draw() для поддержки кастомных цветов и скинов
+    function applyProfileSettings() {
+        // Применяем фон
+        document.body.className = '';
+        document.body.classList.add(`profile-bg-${userSettings.background}`);
+        
+        // Обновляем монеты
+        updateCoinsDisplay();
+        
+        // Обновляем выбранные элементы в профиле
+        updateProfileSelection();
+    }
+
+    function updateProfileSelection() {
+        // Аватары
+        document.querySelectorAll('.avatar-option').forEach(el => {
+            const avatarNum = parseInt(el.dataset.avatar);
+            const isSelected = userSettings.avatar === avatarNum;
+            const isUnlocked = userSettings.unlockedItems.avatars.includes(avatarNum.toString());
+            
+            el.classList.toggle('selected', isSelected);
+            el.classList.toggle('locked', !isUnlocked);
+        });
+        
+        // Фоны
+        document.querySelectorAll('.background-option').forEach(el => {
+            const bgNum = parseInt(el.dataset.bg);
+            const isSelected = userSettings.background === bgNum;
+            const isUnlocked = userSettings.unlockedItems.backgrounds.includes(bgNum.toString());
+            
+            el.classList.toggle('selected', isSelected);
+            el.classList.toggle('locked', !isUnlocked);
+        });
+        
+        // Скины змейки
+        document.querySelectorAll('.snake-skin-option').forEach(el => {
+            const skinNum = parseInt(el.dataset.skin);
+            const isSelected = userSettings.snakeSkin === skinNum;
+            const isUnlocked = userSettings.unlockedItems.snakeSkins.includes(skinNum.toString());
+            
+            el.classList.toggle('selected', isSelected);
+            el.classList.toggle('locked', !isUnlocked);
+        });
+    }
+
+    function showProfileModal() {
+        profileIdSpan.textContent = currentUser.id ? currentUser.id.substring(0, 8) + '...' : 'Гость';
+        profileNameInput.value = currentUser.display_name;
+        profileModal.style.display = 'flex';
+    }
+
+    // ========== ИГРОВЫЕ ФУНКЦИИ ==========
+    function resizeCanvas() {
+        canvas.width = gameContainer.offsetWidth;
+        canvas.height = gameContainer.offsetHeight;
+    }
+
+    function startGame() {
+        // Сброс состояния
+        snake = [];
+        food = {};
+        direction = 'none';
+        nextDirection = 'none';
+        score = 0;
+        gameSpeed = 150;
+        gameActive = true;
+        
+        // Обновление интерфейса
+        mainMenu.style.display = "none";
+        gameContainer.style.display = "block";
+        gameOverElement.style.display = "none";
+        scoreElement.textContent = score;
+        
+        // Инициализация игры
+        resizeCanvas();
+        initSnake();
+        generateFood();
+        draw();
+        
+        // Запуск игрового цикла
+        clearInterval(gameLoop);
+        gameLoop = setInterval(gameStep, gameSpeed);
+    }
+
+    function initSnake() {
+        const startX = Math.floor(canvas.width / gridSize / 2) * gridSize;
+        const startY = Math.floor(canvas.height / gridSize / 2) * gridSize;
+        
+        snake = [];
+        for (let i = 3; i >= 0; i--) {
+            snake.push({ x: startX - i * gridSize, y: startY });
+        }
+    }
+
+    function generateFood() {
+        const maxX = Math.floor(canvas.width / gridSize) - 1;
+        const maxY = Math.floor(canvas.height / gridSize) - 1;
+        
+        let validPosition = false;
+        let attempts = 0;
+        
+        while (!validPosition && attempts < 100) {
+            food = {
+                x: Math.floor(Math.random() * maxX) * gridSize,
+                y: Math.floor(Math.random() * maxY) * gridSize
+            };
+            
+            validPosition = true;
+            for (let segment of snake) {
+                if (segment.x === food.x && segment.y === food.y) {
+                    validPosition = false;
+                    break;
+                }
+            }
+            attempts++;
+        }
+    }
+
     function draw() {
         // Очистка canvas
         ctx.fillStyle = '#222';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         
-        // Отрисовка змейки с кастомными цветами или скинами
+        // Отрисовка змейки
+        const colors = [
+            ['#4CAF50', '#8BC34A'],
+            ['#2196F3', '#03A9F4'],
+            ['#9C27B0', '#E91E63'],
+            ['#FF9800', '#FFC107'],
+            ['#E91E63', '#F06292'],
+            ['#00BCD4', '#80DEEA']
+        ];
+        
+        const skinIndex = (userSettings.snakeSkin - 1) % colors.length;
+        const headColor = colors[skinIndex][0];
+        const bodyColor = colors[skinIndex][1];
+        
         snake.forEach((segment, index) => {
-            if (userSettings.customSnakeColor && userSettings.skin > 100) {
-                // Используем кастомный цвет
-                ctx.fillStyle = userSettings.customSnakeColor;
-            } else if (userSettings.customSnakeSkin) {
-                // Используем кастомный скин (упрощенная версия)
-                const skinIndex = (userSettings.skin || 1) - 1;
-                const colors = [
-                    ['#4CAF50', '#8BC34A'],
-                    ['#2196F3', '#03A9F4'],
-                    ['#9C27B0', '#E91E63'],
-                    ['#FF9800', '#FFC107'],
-                    ['#E91E63', '#F06292'],
-                    ['#00BCD4', '#80DEEA']
-                ];
-                const headColor = colors[skinIndex][0];
-                const bodyColor = colors[skinIndex][1];
-                ctx.fillStyle = index === 0 ? headColor : bodyColor;
-            } else {
-                // Стандартные цвета
-                const skinIndex = (userSettings.skin || 1) - 1;
-                const colors = [
-                    ['#4CAF50', '#8BC34A'],
-                    ['#2196F3', '#03A9F4'],
-                    ['#9C27B0', '#E91E63'],
-                    ['#FF9800', '#FFC107'],
-                    ['#E91E63', '#F06292'],
-                    ['#00BCD4', '#80DEEA']
-                ];
-                const headColor = colors[skinIndex][0];
-                const bodyColor = colors[skinIndex][1];
-                ctx.fillStyle = index === 0 ? headColor : bodyColor;
-            }
-            
+            ctx.fillStyle = index === 0 ? headColor : bodyColor;
             ctx.fillRect(segment.x, segment.y, gridSize - 1, gridSize - 1);
         });
         
@@ -708,21 +656,98 @@
         ctx.fill();
     }
 
-    // Функция показа магазина
-    function showShopModal() {
-        if (!currentUser.id) {
-            showToast('Нужно подключение к интернету');
+    function update() {
+        if (direction === 'none') return;
+        
+        const head = { ...snake[0] };
+        
+        // Движение
+        switch (direction) {
+            case 'up': head.y -= gridSize; break;
+            case 'down': head.y += gridSize; break;
+            case 'left': head.x -= gridSize; break;
+            case 'right': head.x += gridSize; break;
+        }
+        
+        // Проверка столкновений
+        if (head.x < 0 || head.y < 0 || head.x >= canvas.width || head.y >= canvas.height) {
+            gameOver();
             return;
         }
         
+        for (let i = 1; i < snake.length; i++) {
+            if (snake[i].x === head.x && snake[i].y === head.y) {
+                gameOver();
+                return;
+            }
+        }
+        
+        // Добавление новой головы
+        snake.unshift(head);
+        
+        // Проверка съедания еды
+        if (head.x === food.x && head.y === food.y) {
+            score += 10;
+            scoreElement.textContent = score;
+            
+            // Увеличение скорости
+            if (score % 50 === 0 && gameSpeed > 50) {
+                gameSpeed -= 10;
+                clearInterval(gameLoop);
+                gameLoop = setInterval(gameStep, gameSpeed);
+            }
+            
+            generateFood();
+        } else {
+            snake.pop();
+        }
+    }
+
+    function gameStep() {
+        update();
+        draw();
+    }
+
+    async function gameOver() {
+        clearInterval(gameLoop);
+        gameActive = false;
+        
+        finalScoreElement.textContent = `Счёт: ${score}`;
+        gameOverElement.style.display = 'flex';
+        
+        // Начисление монет
+        const coinsEarned = Math.floor(score / 10);
+        if (coinsEarned > 0 && currentUser.id) {
+            userSettings.coins += coinsEarned;
+            await saveProfileSettings();
+            showToast(`Вы заработали ${coinsEarned} монет!`);
+        }
+        
+        // Сохранение результата
+        if (currentUser.id && score > 0) {
+            await saveScore();
+        }
+    }
+
+    function returnToMenu() {
+        clearInterval(gameLoop);
+        gameActive = false;
+        
+        mainMenu.style.display = "block";
+        gameContainer.style.display = "none";
+        gameOverElement.style.display = "none";
+        
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // ========== МАГАЗИН ==========
+    function showShopModal() {
         updateCoinsDisplay();
         renderShopItems();
         shopModal.style.display = 'flex';
     }
 
-    // Отрисовка предметов в магазине
     function renderShopItems() {
-        // Очищаем и заполняем сетки для каждого типа товаров
         const categories = [
             { key: 'avatars', containerId: 'avatars-grid' },
             { key: 'backgrounds', containerId: 'backgrounds-grid' },
@@ -734,20 +759,15 @@
             if (!container) return;
             container.innerHTML = '';
 
-            const items = shopItems[category.key];
-            if (!items) return;
-
-            items.forEach(item => {
-                const isUnlocked = userSettings.unlockedItems && 
-                                  userSettings.unlockedItems[category.key] && 
-                                  userSettings.unlockedItems[category.key].includes(item.id.toString());
+            shopItems[category.key].forEach(item => {
+                const unlockedKey = category.key === 'skins' ? 'snakeSkins' : category.key;
+                const isUnlocked = userSettings.unlockedItems[unlockedKey].includes(item.id.toString());
                 
                 const itemEl = document.createElement('div');
                 itemEl.className = `shop-item ${isUnlocked ? 'unlocked' : ''}`;
                 itemEl.dataset.type = category.key;
                 itemEl.dataset.id = item.id;
 
-                // Добавляем стиль в зависимости от типа
                 if (category.key === 'avatars') {
                     itemEl.style.background = getAvatarColor(item.id);
                     itemEl.textContent = item.id;
@@ -756,20 +776,17 @@
                     itemEl.style.justifyContent = 'center';
                     itemEl.style.color = 'white';
                     itemEl.style.fontWeight = 'bold';
-                    itemEl.style.fontSize = '1.2rem';
                 } else if (category.key === 'backgrounds') {
                     itemEl.classList.add(`profile-bg-${item.id}`);
                 } else if (category.key === 'skins') {
                     itemEl.classList.add(`snake-color-${item.id}`);
                 }
 
-                // Добавляем название
                 const nameEl = document.createElement('div');
                 nameEl.className = 'item-name';
                 nameEl.textContent = item.name;
                 itemEl.appendChild(nameEl);
 
-                // Добавляем цену ТОЛЬКО если предмет не разблокирован
                 if (!isUnlocked) {
                     const priceTag = document.createElement('div');
                     priceTag.className = 'price-tag';
@@ -777,12 +794,243 @@
                     itemEl.appendChild(priceTag);
                 }
 
-                // Обработчик клика
                 itemEl.addEventListener('click', () => handleShopItemClick(category.key, item));
-
                 container.appendChild(itemEl);
             });
         });
+    }
+
+    async function handleShopItemClick(category, item) {
+        const targetCategory = category === 'skins' ? 'snakeSkins' : category;
+        const isUnlocked = userSettings.unlockedItems[targetCategory].includes(item.id.toString());
+        
+        if (isUnlocked) {
+            // Выбор предмета
+            if (category === 'skins') {
+                userSettings.snakeSkin = item.id;
+            } else if (category === 'avatars') {
+                userSettings.avatar = item.id;
+            } else if (category === 'backgrounds') {
+                userSettings.background = item.id;
+            }
+            
+            await saveProfileSettings();
+            applyProfileSettings();
+            showToast(`${item.name} выбран!`);
+        } else {
+            // Покупка предмета
+            if (userSettings.coins >= item.price) {
+                if (confirm(`Купить ${item.name} за ${item.price} монет?`)) {
+                    userSettings.coins -= item.price;
+                    userSettings.unlockedItems[targetCategory].push(item.id.toString());
+                    
+                    // Автоматически выбираем купленный предмет
+                    if (category === 'skins') {
+                        userSettings.snakeSkin = item.id;
+                    } else if (category === 'avatars') {
+                        userSettings.avatar = item.id;
+                    } else if (category === 'backgrounds') {
+                        userSettings.background = item.id;
+                    }
+                    
+                    await saveProfileSettings();
+                    applyProfileSettings();
+                    renderShopItems();
+                    showToast(`${item.name} куплен и выбран!`);
+                }
+            } else {
+                showToast(`Недостаточно монет! Нужно ещё ${item.price - userSettings.coins}`);
+            }
+        }
+    }
+
+    // ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ==========
+    function setupOfflineUser() {
+        currentUser = {
+            id: 'local_' + Date.now(),
+            display_name: 'Гость'
+        };
+        updateProfileButton();
+        showToast('Оффлайн-режим. Результаты не сохранятся.');
+    }
+
+    function updateProfileButton() {
+        profileBtn.textContent = currentUser.display_name;
+    }
+
+    function updateCoinsDisplay() {
+        const coinsCounter = document.getElementById('coins-counter');
+        const coinsAmount = document.getElementById('coins-amount');
+        
+        if (coinsCounter) coinsCounter.textContent = userSettings.coins;
+        if (coinsAmount) coinsAmount.textContent = userSettings.coins;
+    }
+
+    function setupShopTabs() {
+        document.querySelectorAll('.shop-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                
+                this.classList.add('active');
+                const tabContent = document.getElementById(`shop-${this.dataset.tab}`);
+                if (tabContent) tabContent.classList.add('active');
+            });
+        });
+    }
+
+    function setupControls() {
+        // Клавиатура
+        document.addEventListener('keydown', (e) => {
+            if (!gameActive) return;
+            
+            switch (e.key.toLowerCase()) {
+                case 'w': case 'arrowup': handleInput('up'); break;
+                case 's': case 'arrowdown': handleInput('down'); break;
+                case 'a': case 'arrowleft': handleInput('left'); break;
+                case 'd': case 'arrowright': handleInput('right'); break;
+            }
+        });
+        
+        // Свайпы
+        let touchStartX = 0, touchStartY = 0;
+        const SWIPE_THRESHOLD = 30;
+
+        canvas.addEventListener('touchstart', (e) => {
+            if (!gameActive) return;
+            const touch = e.touches[0];
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+        });
+
+        canvas.addEventListener('touchend', (e) => {
+            if (!gameActive) return;
+            const touch = e.changedTouches[0];
+            const diffX = touchStartX - touch.clientX;
+            const diffY = touchStartY - touch.clientY;
+            
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                if (diffX > SWIPE_THRESHOLD) handleInput('left');
+                else if (diffX < -SWIPE_THRESHOLD) handleInput('right');
+            } else {
+                if (diffY > SWIPE_THRESHOLD) handleInput('up');
+                else if (diffY < -SWIPE_THRESHOLD) handleInput('down');
+            }
+        });
+    }
+
+    function handleInput(newDirection) {
+        if (!gameActive) return;
+        
+        if (
+            (newDirection === 'up' && direction !== 'down') ||
+            (newDirection === 'down' && direction !== 'up') ||
+            (newDirection === 'left' && direction !== 'right') ||
+            (newDirection === 'right' && direction !== 'left')
+        ) {
+            nextDirection = newDirection;
+        }
+    }
+
+    async function saveProfileSettings() {
+        if (!currentUser.id || currentUser.id.startsWith('local_')) return;
+        
+        try {
+            await db.ref(`userSettings/${currentUser.id}`).set(userSettings);
+            return true;
+        } catch (error) {
+            console.error('Ошибка сохранения настроек:', error);
+            return false;
+        }
+    }
+
+    async function saveScore() {
+        if (!currentUser.id || currentUser.id.startsWith('local_') || score === 0) return;
+        
+        try {
+            const newScore = {
+                user_id: currentUser.id,
+                display_name: currentUser.display_name,
+                avatar: userSettings.avatar,
+                score: score,
+                date: firebase.database.ServerValue.TIMESTAMP
+            };
+            
+            await db.ref('scores').push(newScore);
+            showToast(`Рекорд ${score} очков сохранен!`);
+        } catch (error) {
+            console.error('Ошибка сохранения результата:', error);
+        }
+    }
+
+    function showFullLeaderboard() {
+        leaderboardModal.style.display = 'flex';
+        loadLeaderboard(fullLeaderboard, null);
+    }
+
+    async function loadLeaderboard(targetElement, limit) {
+        try {
+            targetElement.innerHTML = '<li><span class="loading-spinner"></span>Загрузка...</li>';
+            
+            const snapshot = await db.ref('scores').orderByChild('score').limitToLast(100).once('value');
+            
+            if (!snapshot.exists()) {
+                targetElement.innerHTML = '<li class="no-scores">Рекордов пока нет</li>';
+                return;
+            }
+            
+            const scores = [];
+            snapshot.forEach(child => {
+                scores.push(child.val());
+            });
+            
+            scores.sort((a, b) => b.score - a.score);
+            const displayScores = limit ? scores.slice(0, limit) : scores;
+            
+            targetElement.innerHTML = '';
+            displayScores.forEach((item, index) => {
+                const li = document.createElement('li');
+                li.className = 'leaderboard-entry';
+                if (item.user_id === currentUser.id) li.classList.add('current-user');
+                
+                li.innerHTML = `
+                    <div class="player-info">
+                        <div class="player-avatar" style="background: ${getAvatarColor(item.avatar || 1)}"></div>
+                        <span>${item.display_name}</span>
+                    </div>
+                    <div class="player-score">${item.score}</div>
+                `;
+                targetElement.appendChild(li);
+            });
+            
+        } catch (error) {
+            console.error('Ошибка загрузки рекордов:', error);
+            targetElement.innerHTML = '<li class="no-scores">Ошибка загрузки</li>';
+        }
+    }
+
+    function getAvatarColor(avatarNum) {
+        const colors = [
+            'linear-gradient(135deg, #4CAF50, #8BC34A)',
+            'linear-gradient(135deg, #2196F3, #03A9F4)',
+            'linear-gradient(135deg, #9C27B0, #E91E63)',
+            'linear-gradient(135deg, #FF9800, #FFC107)',
+            'linear-gradient(135deg, #607D8B, #9E9E9E)',
+            'linear-gradient(135deg, #795548, #3E2723)'
+        ];
+        return colors[(avatarNum - 1) % colors.length];
+    }
+
+    function showToast(message) {
+        const toast = document.createElement('div');
+        toast.className = 'toast-notification';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.classList.add('fade-out');
+            setTimeout(() => toast.remove(), 500);
+        }, 3000);
     }
 
     // Обработка клика на предмет в магазине
