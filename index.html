@@ -470,14 +470,46 @@
 
 .shop-item {
     aspect-ratio: 1;
-    border-radius: 8px;
+    border-radius: 10px;
+    border: 2px solid #ddd;
     position: relative;
     overflow: hidden;
     cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 10px;
+}
+
+.shop-item:hover {
+    transform: scale(1.05);
+    border-color: #4CAF50;
 }
 
 .shop-item.unlocked {
-    border: 2px solid #4CAF50;
+    border-color: #4CAF50;
+    background-color: rgba(76, 175, 80, 0.1);
+}
+
+.item-name {
+    font-size: 0.8rem;
+    text-align: center;
+    margin-top: 5px;
+    font-weight: bold;
+}
+
+.price-tag {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    background: gold;
+    color: black;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 0.7rem;
+    font-weight: bold;
 }
         
         /* Цветовые стили */
@@ -1965,7 +1997,15 @@ function getAvatarColor(avatarNum) {
 }
         
 function renderShopItems() {
-        const container = document.getElementById(`${category.id}-items`);
+    // Очищаем и заполняем сетки для каждого типа товаров
+    const categories = [
+        { key: 'avatars', containerId: 'avatars-grid' },
+        { key: 'backgrounds', containerId: 'backgrounds-grid' },
+        { key: 'skins', containerId: 'skins-grid' }
+    ];
+
+    categories.forEach(category => {
+        const container = document.getElementById(category.containerId);
         if (!container) return;
         container.innerHTML = '';
 
@@ -1973,37 +2013,59 @@ function renderShopItems() {
         if (!items) return;
 
         items.forEach(item => {
-            const isUnlocked = userSettings.unlockedItems[category.key]?.includes(item.id);
+            // Для skins используем snakeSkins в unlockedItems
+            const unlockedKey = category.key === 'skins' ? 'snakeSkins' : category.key;
+            const isUnlocked = userSettings.unlockedItems && 
+                              userSettings.unlockedItems[unlockedKey] && 
+                              userSettings.unlockedItems[unlockedKey].includes(item.id);
+            
             const itemEl = document.createElement('div');
-            itemEl.className = 'shop-item';
+            itemEl.className = `shop-item ${isUnlocked ? 'unlocked' : ''}`;
+            itemEl.dataset.type = category.key;
+            itemEl.dataset.id = item.id;
 
-            if (isUnlocked) {
-                itemEl.classList.add('unlocked');
+            // Добавляем стиль в зависимости от типа
+            if (category.key === 'avatars') {
+                itemEl.style.background = getAvatarColor(item.id);
+                itemEl.textContent = item.id;
+                itemEl.style.display = 'flex';
+                itemEl.style.alignItems = 'center';
+                itemEl.style.justifyContent = 'center';
+                itemEl.style.color = 'white';
+                itemEl.style.fontWeight = 'bold';
+            } else if (category.key === 'backgrounds') {
+                itemEl.classList.add(`profile-bg-${item.id}`);
+            } else if (category.key === 'skins') {
+                itemEl.classList.add(`snake-color-${item.id}`);
             }
 
-            itemEl.textContent = item.name;
+            // Добавляем название
+            const nameEl = document.createElement('div');
+            nameEl.className = 'item-name';
+            nameEl.textContent = item.name;
+            itemEl.appendChild(nameEl);
 
-            // Показываем цену только если предмет не куплен
+            // Добавляем цену, если предмет не разблокирован
             if (!isUnlocked) {
                 const priceTag = document.createElement('div');
                 priceTag.className = 'price-tag';
-                priceTag.textContent = item.price;
+                priceTag.textContent = `${item.price} 🪙`;
                 itemEl.appendChild(priceTag);
+            } else {
+                const ownedTag = document.createElement('div');
+                ownedTag.className = 'price-tag';
+                ownedTag.textContent = 'Куплено';
+                ownedTag.style.background = '#4CAF50';
+                itemEl.appendChild(ownedTag);
             }
 
-            // Клик по предмету
-            itemEl.addEventListener('click', async () => {
-                if (!isUnlocked) {
-                    const success = await buyItem(category.key, item.id);
-                    if (success) renderShopItems();
-                } else {
-                    showToast('Этот предмет уже есть у вас');
-                }
-            });
+            // Обработчик клика
+            itemEl.addEventListener('click', () => handleShopItemClick(category.key, item));
 
             container.appendChild(itemEl);
         });
-    };
+    });
+}
 
 
 // Отрисовка предметов в магазине
@@ -2054,18 +2116,33 @@ function createShopItem(type, item) {
 // Обработка клика на предмет в магазине
 async function handleShopItemClick(category, item) {
     try {
-        // Для категории скинов используем snakeSkins
+        // Определяем целевую категорию для unlockedItems
         const targetCategory = category === 'skins' ? 'snakeSkins' : category;
         
+        // Инициализируем unlockedItems если не существует
+        if (!userSettings.unlockedItems) {
+            userSettings.unlockedItems = {
+                avatars: ["1"],
+                backgrounds: ["1"],
+                snakeSkins: ["1"]
+            };
+        }
+        
+        if (!userSettings.unlockedItems[targetCategory]) {
+            userSettings.unlockedItems[targetCategory] = ["1"];
+        }
+
         // Проверяем, разблокирован ли предмет
-        const isUnlocked = userSettings.unlockedItems[targetCategory]?.includes(item.id.toString());
+        const isUnlocked = userSettings.unlockedItems[targetCategory].includes(item.id.toString());
         
         if (isUnlocked) {
-            // Выбираем предмет
+            // Предмет уже куплен - выбираем его
             if (category === 'skins') {
                 userSettings.snakeSkin = item.id;
-            } else {
-                userSettings[category] = item.id;
+            } else if (category === 'avatars') {
+                userSettings.avatar = item.id;
+            } else if (category === 'backgrounds') {
+                userSettings.background = item.id;
             }
             
             applyProfileSettings();
@@ -2073,29 +2150,28 @@ async function handleShopItemClick(category, item) {
             await saveProfileSettings();
             showToast(`${item.name} выбран!`);
         } else {
-            // Пытаемся купить
+            // Пытаемся купить предмет
             if (userSettings.coins >= item.price) {
                 if (confirm(`Купить ${item.name} за ${item.price} монет?`)) {
                     userSettings.coins -= item.price;
                     
-                    // Инициализируем массив, если его нет
-                    if (!userSettings.unlockedItems[targetCategory]) {
-                        userSettings.unlockedItems[targetCategory] = [];
-                    }
-                    
+                    // Добавляем в разблокированные
                     userSettings.unlockedItems[targetCategory].push(item.id.toString());
                     
                     // Автоматически выбираем купленный предмет
                     if (category === 'skins') {
                         userSettings.snakeSkin = item.id;
-                    } else {
-                        userSettings[category] = item.id;
+                    } else if (category === 'avatars') {
+                        userSettings.avatar = item.id;
+                    } else if (category === 'backgrounds') {
+                        userSettings.background = item.id;
                     }
                     
                     await saveProfileSettings();
                     updateCoinsDisplay();
                     renderShopItems();
-                    showToast(`${item.name} куплен!`);
+                    applyProfileSettings();
+                    showToast(`${item.name} куплен и выбран!`);
                 }
             } else {
                 showToast(`Недостаточно монет! Нужно ещё ${item.price - userSettings.coins}`);
@@ -2103,7 +2179,7 @@ async function handleShopItemClick(category, item) {
         }
     } catch (error) {
         console.error('Ошибка в обработчике клика:', error);
-        showToast('Произошла ошибка');
+        showToast('Произошла ошибка при обработке покупки');
     }
 }
         
