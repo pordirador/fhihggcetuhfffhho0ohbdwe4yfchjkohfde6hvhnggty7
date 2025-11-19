@@ -3,573 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Змейка415</title>
+    <title>Змейка33</title>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-auth-compat.js"></script>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            user-select: none;
-        }
-        
-        body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f0f0f0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            overflow: hidden;
-            touch-action: manipulation;
-        }
-        
-        #leaderboard {
-            display: none;
-        }
-        
-        #leaderboard-modal.active #leaderboard {
-            display: block;
-        }
-        
-        /* Главное меню */
-        #main-menu {
-            text-align: center;
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            width: 90%;
-            max-width: 400px;
-        }
-        
-        #main-menu h1 {
-            color: #4CAF50;
-            margin-bottom: 20px;
-            font-size: 2.5rem;
-        }
-        
-        .menu-btn {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            margin: 10px 0;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 1.1rem;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        
-        .menu-btn:hover {
-            background-color: #45a049;
-        }
-        
-        /* Игровое поле */
-        #game-container {
-            display: none;
-            position: relative;
-            width: 100%;
-            max-width: 400px;
-            aspect-ratio: 1/1;
-        }
-        
-        #game-canvas {
-            background-color: #222;
-            display: block;
-            width: 100%;
-            height: 100%;
-            touch-action: none;
-        }
-        
-        #score {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            color: white;
-            font-size: 1.2rem;
-            font-weight: bold;
-            text-shadow: 1px 1px 2px black;
-        }
-        
-        /* Таблица рекордов */
-        #leaderboard {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            padding: 10px 15px;
-            border-radius: 8px;
-            max-width: 150px;
-        }
-        
-        #leaderboard h3 {
-            margin-bottom: 8px;
-            font-size: 1rem;
-            text-align: center;
-        }
-        
-        #top-players {
-            list-style-type: none;
-        }
-        
-        #top-players li {
-            margin: 5px 0;
-            font-size: 0.9rem;
-        }
-        
-        /* Экран окончания игры */
-        #game-over {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.85);
-            color: white;
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        #game-over h2 {
-            font-size: 2rem;
-            margin-bottom: 20px;
-        }
-        
-        #final-score {
-            font-size: 1.5rem;
-            margin-bottom: 30px;
-        }
-        
-        /* Анимации */
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        @keyframes slide-in {
-            from { bottom: -50px; opacity: 0; }
-            to { bottom: 20px; opacity: 1; }
-        }
-        
-        @keyframes modal-open {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
-        
-        .loading-spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(255,255,255,0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s ease-in-out infinite;
-            margin-right: 8px;
-        }
-        
-        /* Уведомления */
-        .toast-notification {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0,0,0,0.8);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 4px;
-            z-index: 1000;
-            animation: slide-in 0.3s ease-out;
-        }
-        
-        .fade-out {
-            opacity: 0;
-            transition: opacity 0.5s;
-        }
-        
-        /* Модальные окна */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.7);
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-        }
-        
-        .modal-content {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            max-width: 350px;
-            width: 90%;
-            animation: modal-open 0.3s ease-out;
-            position: relative;
-            max-height: 90vh;
-            overflow-y: auto;
-        }
-        
-        .modal-content h2 {
-            color: #4CAF50;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-        
-        .modal-content input {
-            width: 100%;
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-        
-        .modal-content button {
-            width: 100%;
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-        
-        .close-modal-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: none;
-            border: none;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: #777;
-            padding: 5px 10px;
-        }
-        
-        .close-modal-btn:hover {
-            color: #333;
-        }
-        
-        /* Таблица рекордов */
-        #full-leaderboard, #top-players {
-            list-style-type: none;
-            padding: 0;
-        }
-        
-        #full-leaderboard {
-            max-height: 60vh;
-            overflow-y: auto;
-        }
-        
-        .leaderboard-entry {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 12px;
-            margin: 5px 0;
-            background: #f9f9f9;
-            border-radius: 4px;
-        }
-        
-        .leaderboard-entry .player-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .leaderboard-entry .player-avatar {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            background-size: cover;
-        }
-        
-        .leaderboard-entry.current-user {
-            background: #e8f5e9;
-            font-weight: bold;
-        }
-        
-        /* Профиль и магазин */
-        #profile-content, .shop-content {
-            max-height: 70vh;
-            overflow-y: auto;
-            padding-right: 8px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        
-        #profile-content::-webkit-scrollbar, .shop-content::-webkit-scrollbar {
-            width: 6px;
-        }
-        
-        #profile-content::-webkit-scrollbar-track, .shop-content::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 3px;
-        }
-        
-        #profile-content::-webkit-scrollbar-thumb, .shop-content::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 3px;
-        }
-        
-        #profile-content::-webkit-scrollbar-thumb:hover, .shop-content::-webkit-scrollbar-thumb:hover {
-            background: #555;
-        }
-        
-        .profile-section, .shop-section {
-            background: #f5f5f5;
-            padding: 15px;
-            border-radius: 10px;
-            margin-bottom: 15px;
-        }
-        
-        .profile-section h3, .shop-section h3 {
-            margin-bottom: 10px;
-            color: #4CAF50;
-        }
-        
-        .avatar-grid, .background-grid, .snake-skin-grid, .shop-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            margin-top: 10px;
-        }
-        
-        .avatar-option, .background-option, .snake-skin-option, .shop-item {
-            aspect-ratio: 1/1;
-            border-radius: 8px;
-            cursor: pointer;
-            border: 2px solid transparent;
-            transition: all 0.2s;
-            background-size: cover;
-            background-position: center;
-            position: relative;
-        }
-        
-        .avatar-option, .snake-skin-option {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: white;
-            font-size: 1.2rem;
-        }
-        
-        .avatar-option:hover, .background-option:hover, 
-        .snake-skin-option:hover, .shop-item:hover {
-            transform: scale(1.05);
-        }
-        
-        .avatar-option.selected, .background-option.selected, 
-        .snake-skin-option.selected, .shop-item.selected {
-            border-color: #4CAF50;
-            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
-        }
-        
-        .locked {
-            opacity: 0.7;
-            position: relative;
-            cursor: not-allowed;
-            filter: grayscale(80%);
-        }
-        
-        .locked::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.5);
-            border-radius: 6px;
-        }
-        
-        .price-tag, .shop-item-price {
-            position: absolute;
-            bottom: 5px;
-            right: 5px;
-            background: gold;
-            color: black;
-            padding: 2px 6px;
-            border-radius: 10px;
-            font-size: 0.8rem;
-            z-index: 2;
-        }
-        
-        .shop-item-price {
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: rgba(0,0,0,0.7);
-            color: white;
-            text-align: center;
-            padding: 5px;
-        }
-        
-        .shop-item.unlocked .shop-item-price {
-            background: rgba(76, 175, 80, 0.8);
-        }
-        
-        #coins-display {
-    position: fixed;
-    top: 15px;
-    right: 15px;
-    background: rgba(0,0,0,0.7);
-    color: gold;
-    padding: 8px 12px;
-    border-radius: 20px;
-    font-weight: bold;
-    z-index: 100;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-}
-        .shop-tabs {
-    display: flex;
-    margin-bottom: 15px;
-    border-bottom: 1px solid #ddd;
-}
+        /* ... предыдущие стили остаются без изменений ... */
 
-.shop-tab {
-    padding: 10px 15px;
-    background: none;
-    border: none;
-    cursor: pointer;
-    border-bottom: 3px solid transparent;
-}
-
-.shop-tab.active {
-    border-bottom-color: #4CAF50;
-    font-weight: bold;
-}
-
-.tab-content {
-    display: none;
-}
-
-.tab-content.active {
-    display: block;
-}
-
-.items-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-}
-
-.shop-item {
-    aspect-ratio: 1;
-    border-radius: 10px;
-    border: 2px solid #ddd;
-    position: relative;
-    overflow: hidden;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    padding: 10px;
-}
-
-.shop-item:hover {
-    transform: scale(1.05);
-    border-color: #4CAF50;
-}
-
-.shop-item.unlocked {
-    border: 2px solid #4CAF50;
-    background: rgba(76, 175, 80, 0.1);
-    position: relative;
-}
-
-.shop-item.unlocked::after {
-    content: '✓';
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    background: #4CAF50;
-    color: white;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.8rem;
-    font-weight: bold;
-}
-
-.avatar-option, .background-option, .snake-skin-option {
-    transition: all 0.3s ease;
-}
-
-.avatar-option:hover, .background-option:hover, .snake-skin-option:hover {
-    transform: scale(1.05);
-}
-
-.item-name {
-    font-size: 0.8rem;
-    text-align: center;
-    margin-top: 5px;
-    font-weight: bold;
-}
-
-.price-tag {
-    position: absolute;
-    bottom: 5px;
-    right: 5px;
-    background: gold;
-    color: black;
-    padding: 2px 6px;
-    border-radius: 10px;
-    font-size: 0.7rem;
-    font-weight: bold;
-}
-        
-        /* Цветовые стили */
-        .snake-color-1 { background-color: #4CAF50; }
-        .snake-color-2 { background-color: #2196F3; }
-        .snake-color-3 { background-color: #9C27B0; }
-        .snake-color-4 { background-color: #FF9800; }
-        .snake-color-5 { background-color: #E91E63; }
-        .snake-color-6 { background-color: #00BCD4; }
-        
-        .profile-bg-1 { background: linear-gradient(135deg, #4CAF50, #8BC34A); }
-        .profile-bg-2 { background: linear-gradient(135deg, #2196F3, #03A9F4); }
-        .profile-bg-3 { background: linear-gradient(135deg, #9C27B0, #E91E63); }
-        .profile-bg-4 { background: linear-gradient(135deg, #FF9800, #FFC107); }
-        .profile-bg-5 { background: linear-gradient(135deg, #607D8B, #9E9E9E); }
-        .profile-bg-6 { background: linear-gradient(135deg, #795548, #3E2723); }
-        
-        /* Адаптация для мобильных */
-        @media (max-width: 500px) {
-            #main-menu {
-                padding: 20px;
-            }
-            
-            #leaderboard {
-                max-width: 120px;
-                padding: 8px 10px;
-            }
-            
-            .no-scores small {
-                opacity: 0.7;
-                font-size: 0.8em;
-            }
-        }
-    .color-palette {
+        /* Стили для расширенной палитры цветов */
+        .color-palette {
             display: grid;
             grid-template-columns: repeat(6, 1fr);
             gap: 8px;
@@ -655,9 +98,16 @@
             background: #f9f9f9;
             border-radius: 10px;
         }
-    </style>
-</head>
-<body>
+        
+        .custom-skin-preview {
+            width: 100px;
+            height: 30px;
+            margin: 10px auto;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-size: cover;
+            background-position: center;
+        }
     </style>
 </head>
 <body>
@@ -677,228 +127,697 @@
 
 <!-- Модальное окно магазина -->
 <div id="shop-modal" class="modal">
-        <div class="modal-content">
-            <button class="close-modal-btn">&times;</button>
-            <h2>Магазин</h2>
-            <div class="coins-display">
-                Ваши монеты: <span id="coins-amount">0</span> 🪙
+    <div class="modal-content">
+        <button class="close-modal-btn">&times;</button>
+        <h2>Магазин</h2>
+        <div class="coins-display">
+            Ваши монеты: <span id="coins-amount">0</span> 🪙
+        </div>
+        <div class="shop-tabs">
+            <button class="shop-tab active" data-tab="avatars">Аватары</button>
+            <button class="shop-tab" data-tab="backgrounds">Фоны</button>
+            <button class="shop-tab" data-tab="skins">Скины змейки</button>
+            <button class="shop-tab" data-tab="custom">Кастомизация</button>
+        </div>
+        
+        <div class="shop-content">
+            <div id="shop-avatars" class="tab-content active">
+                <div class="items-grid" id="avatars-grid"></div>
             </div>
-            <div class="shop-tabs">
-                <button class="shop-tab active" data-tab="avatars">Аватары</button>
-                <button class="shop-tab" data-tab="backgrounds">Фоны</button>
-                <button class="shop-tab" data-tab="skins">Скины змейки</button>
-                <button class="shop-tab" data-tab="custom">Кастомизация</button>
+            <div id="shop-backgrounds" class="tab-content">
+                <div class="items-grid" id="backgrounds-grid"></div>
             </div>
-            
-            <div class="shop-content">
-                <div id="shop-avatars" class="tab-content active">
-                    <div class="items-grid" id="avatars-grid"></div>
-                </div>
-                <div id="shop-backgrounds" class="tab-content">
-                    <div class="items-grid" id="backgrounds-grid"></div>
-                </div>
-                <div id="shop-skins" class="tab-content">
-                    <div class="items-grid" id="skins-grid"></div>
-                </div>
-                <div id="shop-custom" class="tab-content">
-                    <div class="customization-section">
-                        <h3>Расширенная палитра цветов для змейки</h3>
-                        <p>Выберите цвет из палитры или загрузите свой:</p>
-                        <div class="color-palette" id="color-palette">
-                            <!-- Цвета будут добавлены через JavaScript -->
-                        </div>
-                        
-                        <div class="photo-upload-section">
-                            <h3>Загрузите свой скин для змейки</h3>
-                            <p>Стоимость: 10 монет</p>
-                            <input type="file" id="snake-skin-upload" accept="image/*" style="display: none;">
-                            <button class="upload-btn" id="snake-skin-upload-btn">Выбрать изображение</button>
-                            <div class="upload-preview empty" id="snake-skin-preview"></div>
-                            <button class="menu-btn" id="save-snake-skin-btn" style="display: none;">Сохранить скин (10 монет)</button>
-                        </div>
+            <div id="shop-skins" class="tab-content">
+                <div class="items-grid" id="skins-grid"></div>
+            </div>
+            <div id="shop-custom" class="tab-content">
+                <div class="customization-section">
+                    <h3>Расширенная палитра цветов для змейки</h3>
+                    <p>Выберите цвет из палитры:</p>
+                    <div class="color-palette" id="color-palette">
+                        <!-- Цвета будут добавлены через JavaScript -->
                     </div>
-                    
-                    <div class="customization-section">
-                        <h3>Загрузите свой аватар</h3>
-                        <p>Стоимость: 10 монет</p>
-                        <input type="file" id="avatar-upload" accept="image/*" style="display: none;">
-                        <button class="upload-btn" id="avatar-upload-btn">Выбрать изображение</button>
-                        <div class="upload-preview empty" id="avatar-preview"></div>
-                        <button class="menu-btn" id="save-avatar-btn" style="display: none;">Сохранить аватар (10 монет)</button>
-                    </div>
-                    
-                    <div class="customization-section">
-                        <h3>Загрузите свой фон для игры</h3>
-                        <p>Стоимость: 10 монет</p>
-                        <input type="file" id="background-upload" accept="image/*" style="display: none;">
-                        <button class="upload-btn" id="background-upload-btn">Выбрать изображение</button>
-                        <div class="upload-preview empty" id="background-preview"></div>
-                        <button class="menu-btn" id="save-background-btn" style="display: none;">Сохранить фон (10 монет)</button>
-                    </div>
+                </div>
+                
+                <div class="customization-section">
+                    <h3>Загрузите свой скин для змейки</h3>
+                    <p>Стоимость: 10 монет</p>
+                    <input type="file" id="snake-skin-upload" accept="image/*" style="display: none;">
+                    <button class="upload-btn" id="snake-skin-upload-btn">Выбрать изображение</button>
+                    <div class="upload-preview empty" id="snake-skin-preview"></div>
+                    <div class="custom-skin-preview" id="custom-skin-preview"></div>
+                    <button class="menu-btn" id="save-snake-skin-btn" style="display: none;">Сохранить скин (10 монет)</button>
+                </div>
+                
+                <div class="customization-section">
+                    <h3>Загрузите свой аватар</h3>
+                    <p>Стоимость: 10 монет</p>
+                    <input type="file" id="avatar-upload" accept="image/*" style="display: none;">
+                    <button class="upload-btn" id="avatar-upload-btn">Выбрать изображение</button>
+                    <div class="upload-preview empty" id="avatar-preview"></div>
+                    <button class="menu-btn" id="save-avatar-btn" style="display: none;">Сохранить аватар (10 монет)</button>
+                </div>
+                
+                <div class="customization-section">
+                    <h3>Загрузите свой фон для игры</h3>
+                    <p>Стоимость: 10 монет</p>
+                    <input type="file" id="background-upload" accept="image/*" style="display: none;">
+                    <button class="upload-btn" id="background-upload-btn">Выбрать изображение</button>
+                    <div class="upload-preview empty" id="background-preview"></div>
+                    <button class="menu-btn" id="save-background-btn" style="display: none;">Сохранить фон (10 монет)</button>
                 </div>
             </div>
         </div>
     </div>
+</div>
 
-    <script>
-        // ========== ИНИЦИАЛИЗАЦИЯ FIREBASE ==========
-const firebaseConfig = {
-    apiKey: "AIzaSyBfSUiSe_sWYTLEyA38DN2C7xtKL3uwV8E",
-    authDomain: "mr-zmeyka.firebaseapp.com",
-    databaseURL: "https://mr-zmeyka-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "mr-zmeyka",
-    storageBucket: "mr-zmeyka.appspot.com",
-    messagingSenderId: "521576761425",
-    appId: "1:521576761425:web:8dc4125c3a1b5f0a285070"
-};
-const extendedColorPalette = [
-            '#FF5252', '#FF4081', '#E040FB', '#7C4DFF', '#536DFE', '#448AFF',
-            '#40C4FF', '#18FFFF', '#64FFDA', '#69F0AE', '#B2FF59', '#EEFF41',
-            '#FFFF00', '#FFD740', '#FFAB40', '#FF6E40', '#4CAF50', '#8BC34A',
-            '#CDDC39', '#FFEB3B', '#FFC107', '#FF9800', '#FF5722', '#795548',
-            '#9E9E9E', '#607D8B', '#000000', '#FFFFFF'
-        ];
+<!-- Остальная HTML структура без изменений -->
+<div id="game-container">
+    <canvas id="game-canvas"></canvas>
+    <div id="score">0</div>
+    
+    <div id="game-over">
+        <h2>Игра окончена!</h2>
+        <div id="final-score">Счёт: 0</div>
+        <button id="restart-btn" class="menu-btn">Играть снова</button>
+        <button id="menu-btn" class="menu-btn" style="margin-top: 15px; background: #f44336;">В меню</button>
+    </div>
+</div>
 
-        // Обновляем shopItems с расширенными цветами
-        shopItems.skins = [
+<div id="how-to-play-modal" class="modal">
+    <div class="modal-content">
+        <h2>Как играть</h2>
+        <p><strong>Управление:</strong></p>
+        <ul style="margin-bottom: 20px; padding-left: 20px;">
+            <li style="margin-bottom: 8px;">На компьютере: клавиши WASD или стрелки</li>
+            <li style="margin-bottom: 8px;">На телефоне: свайпы в нужном направлении</li>
+        </ul>
+        <p><strong>Цель:</strong> Управляйте змейкой, собирайте еду и набирайте очки!</p>
+        <button id="close-how-to-play" class="menu-btn">Понятно</button>
+    </div>
+</div>
+
+<div id="profile-modal" class="modal">
+    <div class="modal-content">
+        <button class="close-modal-btn">&times;</button>
+        <h2>Мой профиль</h2>
+        <div id="profile-content">
+            <div class="profile-section">
+                <h3>Основная информация</h3>
+                <p><strong>Ваш ID:</strong> <span id="profile-id"></span></p>
+                <input type="text" id="profile-name-input" placeholder="Ваше игровое имя" maxlength="20">
+            </div>
+            
+            <div class="profile-section">
+                <h3>Аватар профиля</h3>
+                <div class="avatar-grid">
+                    <div class="avatar-option" data-avatar="1">1</div>
+                    <div class="avatar-option" data-avatar="2">2</div>
+                    <div class="avatar-option" data-avatar="3">3</div>
+                    <div class="avatar-option" data-avatar="4">4</div>
+                    <div class="avatar-option" data-avatar="5">5</div>
+                    <div class="avatar-option" data-avatar="6">6</div>
+                </div>
+            </div>
+            
+            <div class="profile-section">
+                <h3>Фон профиля</h3>
+                <div class="background-grid">
+                    <div class="background-option profile-bg-1" data-bg="1"></div>
+                    <div class="background-option profile-bg-2" data-bg="2"></div>
+                    <div class="background-option profile-bg-3" data-bg="3"></div>
+                    <div class="background-option profile-bg-4" data-bg="4"></div>
+                    <div class="background-option profile-bg-5" data-bg="5"></div>
+                    <div class="background-option profile-bg-6" data-bg="6"></div>
+                </div>
+            </div>
+            
+            <div class="profile-section">
+                <h3>Внешность змейки</h3>
+                <div class="snake-skin-grid">
+                    <div class="snake-skin-option snake-color-1" data-skin="1"></div>
+                    <div class="snake-skin-option snake-color-2" data-skin="2"></div>
+                    <div class="snake-skin-option snake-color-3" data-skin="3"></div>
+                    <div class="snake-skin-option snake-color-4" data-skin="4"></div>
+                    <div class="snake-skin-option snake-color-5" data-skin="5"></div>
+                    <div class="snake-skin-option snake-color-6" data-skin="6"></div>
+                </div>
+            </div>
+            
+            <button id="profile-save-btn" class="menu-btn">Сохранить</button>
+        </div>
+    </div>
+</div>
+
+<div id="leaderboard-modal" class="modal">
+    <div class="modal-content">
+        <h2>Таблица рекордов</h2>
+        <ol id="full-leaderboard"></ol>
+        <button id="refresh-leaderboard" class="secondary-btn">Обновить</button>
+        <button id="close-leaderboard" class="menu-btn">Закрыть</button>
+    </div>
+</div>
+
+<div id="coins-display">
+    <span>🪙</span>
+    <span id="coins-counter">0</span>
+</div>
+
+<script>
+    // ========== ИНИЦИАЛИЗАЦИЯ FIREBASE ==========
+    const firebaseConfig = {
+        apiKey: "AIzaSyBfSUiSe_sWYTLEyA38DN2C7xtKL3uwV8E",
+        authDomain: "mr-zmeyka.firebaseapp.com",
+        databaseURL: "https://mr-zmeyka-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "mr-zmeyka",
+        storageBucket: "mr-zmeyka.appspot.com",
+        messagingSenderId: "521576761425",
+        appId: "1:521576761425:web:8dc4125c3a1b5f0a285070"
+    };
+
+    // Инициализация Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const auth = firebase.auth();
+
+    // Включим логирование для отладки
+    firebase.database.enableLogging(true);
+
+    // ========== ГЛОБАЛЬНЫЕ ПЕРЕМЕННЫЕ ==========
+    
+    // ЭЛЕМЕНТЫ ИНТЕРФЕЙСА
+    const mainMenu = document.getElementById('main-menu');
+    const playBtn = document.getElementById('play-btn');
+    const leaderboardBtn = document.getElementById('leaderboard-btn');
+    const howToPlayBtn = document.getElementById('how-to-play-btn');
+    const profileBtn = document.getElementById('profile-btn');
+    const shopBtn = document.getElementById('shop-btn');
+
+    const gameContainer = document.getElementById('game-container');
+    const canvas = document.getElementById('game-canvas');
+    const ctx = canvas.getContext('2d');
+    const scoreElement = document.getElementById('score');
+    const topPlayersList = document.getElementById('top-players');
+    const fullLeaderboard = document.getElementById('full-leaderboard');
+
+    const gameOverElement = document.getElementById('game-over');
+    const finalScoreElement = document.getElementById('final-score');
+    const restartBtn = document.getElementById('restart-btn');
+    const menuBtn = document.getElementById('menu-btn');
+
+    // Модальные окна
+    const profileModal = document.getElementById('profile-modal');
+    const howToPlayModal = document.getElementById('how-to-play-modal');
+    const leaderboardModal = document.getElementById('leaderboard-modal');
+    const shopModal = document.getElementById('shop-modal');
+
+    // Элементы профиля
+    const profileNameInput = document.getElementById('profile-name-input');
+    const profileIdSpan = document.getElementById('profile-id');
+    const profileSaveBtn = document.getElementById('profile-save-btn');
+    const refreshLeaderboardBtn = document.getElementById('refresh-leaderboard');
+    const closeLeaderboardBtn = document.getElementById('close-leaderboard');
+    const closeHowToPlayBtn = document.getElementById('close-how-to-play');
+
+    // Цены на предметы - ПЕРЕМЕЩАЕМ ПЕРЕД ИСПОЛЬЗОВАНИЕМ
+    const shopItems = {
+        avatars: [
+            { id: 1, name: "Зеленый", price: 0, unlocked: true },
+            { id: 2, name: "Синий", price: 1 },
+            { id: 3, name: "Фиолетовый", price: 1 },
+            { id: 4, name: "Оранжевый", price: 1 },
+            { id: 5, name: "Розовый", price: 1 },
+            { id: 6, name: "Бирюзовый", price: 1 }
+        ],
+        backgrounds: [
+            { id: 1, name: "Зеленый градиент", price: 0, unlocked: true },
+            { id: 2, name: "Синий градиент", price: 1 },
+            { id: 3, name: "Фиолетовый градиент", price: 1 },
+            { id: 4, name: "Оранжевый градиент", price: 1 },
+            { id: 5, name: "Серый градиент", price: 1 },
+            { id: 6, name: "Коричневый градиент", price: 1 }
+        ],
+        skins: [
             { id: 1, name: "Зеленая змейка", price: 0, unlocked: true },
             { id: 2, name: "Синяя змейка", price: 1 },
             { id: 3, name: "Фиолетовая змейка", price: 1 },
             { id: 4, name: "Оранжевая змейка", price: 1 },
             { id: 5, name: "Розовая змейка", price: 1 },
-            { id: 6, name: "Бирюзовая змейка", price: 1 },
-            { id: 7, name: "Красная змейка", price: 1 },
-            { id: 8, name: "Желтая змейка", price: 1 },
-            { id: 9, name: "Черная змейка", price: 1 },
-            { id: 10, name: "Белая змейка", price: 1 }
-        ];
+            { id: 6, name: "Бирюзовая змейка", price: 1 }
+        ]
+    };
 
-        // Добавляем пользовательские скины в userSettings
-        if (!userSettings.customSkins) {
-            userSettings.customSkins = [];
-        }
-        if (!userSettings.customAvatar) {
-            userSettings.customAvatar = null;
-        }
-        if (!userSettings.customBackground) {
-            userSettings.customBackground = null;
-        }
+    // Расширенная палитра цветов
+    const extendedColorPalette = [
+        '#FF5252', '#FF4081', '#E040FB', '#7C4DFF', '#536DFE', '#448AFF',
+        '#40C4FF', '#18FFFF', '#64FFDA', '#69F0AE', '#B2FF59', '#EEFF41',
+        '#FFFF00', '#FFD740', '#FFAB40', '#FF6E40', '#4CAF50', '#8BC34A',
+        '#CDDC39', '#FFEB3B', '#FFC107', '#FF9800', '#FF5722', '#795548',
+        '#9E9E9E', '#607D8B', '#000000', '#FFFFFF'
+    ];
 
-// Инициализация Firebase
-const app = firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
-const auth = firebase.auth();
+    // ========== НАСТРОЙКИ ИГРЫ ==========
+    const gridSize = 20;
+    let snake = [];
+    let food = {};
+    let direction = 'none';
+    let nextDirection = 'none';
+    let score = 0;
+    let gameSpeed = 150;
+    let gameLoop;
+    let gameActive = false;
+    let refreshInterval;
+    
+    // Текущий пользователь
+    let currentUser = {
+        id: null,
+        display_name: 'Гость'
+    };
 
-// Включим логирование для отладки
-firebase.database.enableLogging(true);
+    // Настройки профиля
+    let userSettings = {
+        coins: 0,
+        avatar: 1,
+        background: 1,
+        skin: 1,
+        unlockedItems: {
+            avatars: ["1"],
+            backgrounds: ["1"],
+            skins: ["1"]
+        },
+        inventory: {
+            avatars: ["1"],
+            backgrounds: ["1"],
+            skins: ["1"]
+        },
+        // Добавляем поля для кастомизации
+        customSnakeColor: null,
+        customSnakeSkin: null,
+        customAvatar: null,
+        customBackground: null
+    };
 
-// ========== ЭЛЕМЕНТЫ ИНТЕРФЕЙСА ==========
-const mainMenu = document.getElementById('main-menu');
-const playBtn = document.getElementById('play-btn');
-const leaderboardBtn = document.getElementById('leaderboard-btn');
-const howToPlayBtn = document.getElementById('how-to-play-btn');
-const profileBtn = document.getElementById('profile-btn');
-const shopBtn = document.getElementById('shop-btn');
+    // ========== ОСНОВНЫЕ ФУНКЦИИ ==========
 
-const gameContainer = document.getElementById('game-container');
-const canvas = document.getElementById('game-canvas');
-const ctx = canvas.getContext('2d');
-const scoreElement = document.getElementById('score');
-const topPlayersList = document.getElementById('top-players');
-const fullLeaderboard = document.getElementById('full-leaderboard');
-
-const gameOverElement = document.getElementById('game-over');
-const finalScoreElement = document.getElementById('final-score');
-const restartBtn = document.getElementById('restart-btn');
-const menuBtn = document.getElementById('menu-btn');
-
-// Модальные окна
-const profileModal = document.getElementById('profile-modal');
-const howToPlayModal = document.getElementById('how-to-play-modal');
-const leaderboardModal = document.getElementById('leaderboard-modal');
-const shopModal = document.getElementById('shop-modal');
-
-// Элементы профиля
-const profileNameInput = document.getElementById('profile-name-input');
-const profileIdSpan = document.getElementById('profile-id');
-const profileSaveBtn = document.getElementById('profile-save-btn');
-const refreshLeaderboardBtn = document.getElementById('refresh-leaderboard');
-const closeLeaderboardBtn = document.getElementById('close-leaderboard');
-const closeHowToPlayBtn = document.getElementById('close-how-to-play');
-
-// Цены на предметы
-const shopItems = {
-    avatars: [
-        { id: 1, name: "Зеленый", price: 0, unlocked: true },
-        { id: 2, name: "Синий", price: 1 },
-        { id: 3, name: "Фиолетовый", price: 1 },
-        { id: 4, name: "Оранжевый", price: 1 },
-        { id: 5, name: "Розовый", price: 1 },
-        { id: 6, name: "Бирюзовый", price: 1 }
-    ],
-    backgrounds: [
-        { id: 1, name: "Зеленый градиент", price: 0, unlocked: true },
-        { id: 2, name: "Синий градиент", price: 1 },
-        { id: 3, name: "Фиолетовый градиент", price: 1 },
-        { id: 4, name: "Оранжевый градиент", price: 1 },
-        { id: 5, name: "Серый градиент", price: 1 },
-        { id: 6, name: "Коричневый градиент", price: 1 }
-    ],
-    skins: [
-        { id: 1, name: "Зеленая змейка", price: 0, unlocked: true },
-        { id: 2, name: "Синяя змейка", price: 1 },
-        { id: 3, name: "Фиолетовая змейка", price: 1 },
-        { id: 4, name: "Оранжевая змейка", price: 1 },
-        { id: 5, name: "Розовая змейка", price: 1 },
-        { id: 6, name: "Бирюзовая змейка", price: 1 }
-    ]
-};
-
-// Обработчики событий
-shopBtn.addEventListener('click', showShopModal);
+    // Инициализация цветовой палитры
+    function initColorPalette() {
+        const paletteContainer = document.getElementById('color-palette');
+        if (!paletteContainer) return;
         
+        paletteContainer.innerHTML = '';
         
-        // ========== НАСТРОЙКИ ИГРЫ ==========
-        const gridSize = 20;
-        let snake = [];
-        let food = {};
-        let direction = 'none';
-        let nextDirection = 'none';
-        let score = 0;
-        let gameSpeed = 150;
-        let gameLoop;
-        let gameActive = false;
-        let refreshInterval;
-        
-        // Текущий пользователь
-        // Настройки профиля 
-        let currentUser = {
-            id: null,
-            display_name: 'Гость'
-        };
-        // Настройки профиля
-// В разделе с настройками профиля добавьте:
-// Замените текущее объявление userSettings на это:
-// В самом начале скрипта, перед всеми функциями
-// Правильная структура для инвентаря
-// В самом начале скрипта (перед всеми функциями)
-let userSettings = {
-    coins: 0,
-    avatar: 1,
-    background: 1,
-    skin: 1,
-    unlockedItems: {
-        avatars: ["1"],
-        backgrounds: ["1"],
-        skins: ["1"]
-    },
-    inventory: {
-        avatars: ["1"],
-        backgrounds: ["1"],
-        skins: ["1"]
+        // Добавляем стандартные цвета
+        extendedColorPalette.forEach((color, index) => {
+            const colorOption = document.createElement('div');
+            colorOption.className = 'color-option';
+            colorOption.style.backgroundColor = color;
+            colorOption.dataset.color = color;
+            colorOption.dataset.id = index + 100; // ID больше 100 для кастомных цветов
+            
+            colorOption.addEventListener('click', function() {
+                selectCustomColor(color, index + 100);
+            });
+            
+            paletteContainer.appendChild(colorOption);
+        });
     }
-};
+
+    // Выбор кастомного цвета
+    function selectCustomColor(color, colorId) {
+        if (!gameActive) return;
         
+        // Сохраняем выбранный цвет
+        userSettings.customSnakeColor = color;
+        userSettings.skin = colorId;
+        
+        // Применяем цвет в игре
+        if (gameActive) draw();
+        
+        showToast('Цвет змейки изменен!');
+        
+        // Сохраняем настройки
+        if (currentUser.id && !currentUser.id.startsWith('local_')) {
+            saveProfileSettings();
+        }
+    }
+
+    // Инициализация загрузки файлов
+    function initFileUploads() {
+        // Загрузка скина для змейки
+        const snakeSkinUpload = document.getElementById('snake-skin-upload');
+        const snakeSkinUploadBtn = document.getElementById('snake-skin-upload-btn');
+        const snakeSkinPreview = document.getElementById('snake-skin-preview');
+        const customSkinPreview = document.getElementById('custom-skin-preview');
+        const saveSnakeSkinBtn = document.getElementById('save-snake-skin-btn');
+        
+        snakeSkinUploadBtn.addEventListener('click', () => snakeSkinUpload.click());
+        
+        snakeSkinUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    snakeSkinPreview.style.backgroundImage = `url(${e.target.result})`;
+                    snakeSkinPreview.classList.remove('empty');
+                    customSkinPreview.style.backgroundImage = `url(${e.target.result})`;
+                    saveSnakeSkinBtn.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        saveSnakeSkinBtn.addEventListener('click', async function() {
+            if (userSettings.coins < 10) {
+                showToast('Недостаточно монет!');
+                return;
+            }
+            
+            const file = snakeSkinUpload.files[0];
+            if (!file) {
+                showToast('Сначала выберите изображение');
+                return;
+            }
+            
+            try {
+                // Конвертируем изображение в base64
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    const imageData = e.target.result;
+                    
+                    // Сохраняем в userSettings
+                    userSettings.customSnakeSkin = imageData;
+                    userSettings.coins -= 10;
+                    
+                    // Сохраняем в Firebase
+                    await db.ref(`userSettings/${currentUser.id}`).update({
+                        coins: userSettings.coins,
+                        customSnakeSkin: imageData
+                    });
+                    
+                    showToast('Скин сохранен!');
+                    updateCoinsDisplay();
+                    saveSnakeSkinBtn.style.display = 'none';
+                    snakeSkinPreview.classList.add('empty');
+                    snakeSkinPreview.style.backgroundImage = '';
+                    snakeSkinUpload.value = '';
+                };
+                reader.readAsDataURL(file);
+            } catch (error) {
+                console.error('Ошибка сохранения скина:', error);
+                showToast('Ошибка сохранения скина');
+            }
+        });
+        
+        // Загрузка аватара
+        const avatarUpload = document.getElementById('avatar-upload');
+        const avatarUploadBtn = document.getElementById('avatar-upload-btn');
+        const avatarPreview = document.getElementById('avatar-preview');
+        const saveAvatarBtn = document.getElementById('save-avatar-btn');
+        
+        avatarUploadBtn.addEventListener('click', () => avatarUpload.click());
+        
+        avatarUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    avatarPreview.style.backgroundImage = `url(${e.target.result})`;
+                    avatarPreview.classList.remove('empty');
+                    saveAvatarBtn.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        saveAvatarBtn.addEventListener('click', async function() {
+            if (userSettings.coins < 10) {
+                showToast('Недостаточно монет!');
+                return;
+            }
+            
+            const file = avatarUpload.files[0];
+            if (!file) {
+                showToast('Сначала выберите изображение');
+                return;
+            }
+            
+            try {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    const imageData = e.target.result;
+                    
+                    userSettings.customAvatar = imageData;
+                    userSettings.coins -= 10;
+                    
+                    await db.ref(`userSettings/${currentUser.id}`).update({
+                        coins: userSettings.coins,
+                        customAvatar: imageData
+                    });
+                    
+                    showToast('Аватар сохранен!');
+                    updateCoinsDisplay();
+                    saveAvatarBtn.style.display = 'none';
+                    avatarPreview.classList.add('empty');
+                    avatarPreview.style.backgroundImage = '';
+                    avatarUpload.value = '';
+                };
+                reader.readAsDataURL(file);
+            } catch (error) {
+                console.error('Ошибка сохранения аватара:', error);
+                showToast('Ошибка сохранения аватара');
+            }
+        });
+        
+        // Загрузка фона
+        const backgroundUpload = document.getElementById('background-upload');
+        const backgroundUploadBtn = document.getElementById('background-upload-btn');
+        const backgroundPreview = document.getElementById('background-preview');
+        const saveBackgroundBtn = document.getElementById('save-background-btn');
+        
+        backgroundUploadBtn.addEventListener('click', () => backgroundUpload.click());
+        
+        backgroundUpload.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    backgroundPreview.style.backgroundImage = `url(${e.target.result})`;
+                    backgroundPreview.classList.remove('empty');
+                    saveBackgroundBtn.style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        saveBackgroundBtn.addEventListener('click', async function() {
+            if (userSettings.coins < 10) {
+                showToast('Недостаточно монет!');
+                return;
+            }
+            
+            const file = backgroundUpload.files[0];
+            if (!file) {
+                showToast('Сначала выберите изображение');
+                return;
+            }
+            
+            try {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    const imageData = e.target.result;
+                    
+                    userSettings.customBackground = imageData;
+                    userSettings.coins -= 10;
+                    
+                    await db.ref(`userSettings/${currentUser.id}`).update({
+                        coins: userSettings.coins,
+                        customBackground: imageData
+                    });
+                    
+                    showToast('Фон сохранен!');
+                    updateCoinsDisplay();
+                    saveBackgroundBtn.style.display = 'none';
+                    backgroundPreview.classList.add('empty');
+                    backgroundPreview.style.backgroundImage = '';
+                    backgroundUpload.value = '';
+                    
+                    // Применяем новый фон
+                    applyCustomBackground();
+                };
+                reader.readAsDataURL(file);
+            } catch (error) {
+                console.error('Ошибка сохранения фона:', error);
+                showToast('Ошибка сохранения фона');
+            }
+        });
+    }
+
+    // Применение кастомного фона
+    function applyCustomBackground() {
+        if (userSettings.customBackground) {
+            document.body.style.backgroundImage = `url(${userSettings.customBackground})`;
+            document.body.style.backgroundSize = 'cover';
+            document.body.style.backgroundPosition = 'center';
+            document.body.style.backgroundRepeat = 'no-repeat';
+            document.body.className = ''; // Убираем классы градиентов
+        } else {
+            document.body.style.backgroundImage = '';
+            document.body.className = '';
+            document.body.classList.add(`profile-bg-${userSettings.background}`);
+        }
+    }
+
+    // Модифицируем функцию draw() для поддержки кастомных цветов и скинов
+    function draw() {
+        // Очистка canvas
+        ctx.fillStyle = '#222';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Отрисовка змейки с кастомными цветами или скинами
+        snake.forEach((segment, index) => {
+            if (userSettings.customSnakeColor && userSettings.skin > 100) {
+                // Используем кастомный цвет
+                ctx.fillStyle = userSettings.customSnakeColor;
+            } else if (userSettings.customSnakeSkin) {
+                // Используем кастомный скин (упрощенная версия)
+                const skinIndex = (userSettings.skin || 1) - 1;
+                const colors = [
+                    ['#4CAF50', '#8BC34A'],
+                    ['#2196F3', '#03A9F4'],
+                    ['#9C27B0', '#E91E63'],
+                    ['#FF9800', '#FFC107'],
+                    ['#E91E63', '#F06292'],
+                    ['#00BCD4', '#80DEEA']
+                ];
+                const headColor = colors[skinIndex][0];
+                const bodyColor = colors[skinIndex][1];
+                ctx.fillStyle = index === 0 ? headColor : bodyColor;
+            } else {
+                // Стандартные цвета
+                const skinIndex = (userSettings.skin || 1) - 1;
+                const colors = [
+                    ['#4CAF50', '#8BC34A'],
+                    ['#2196F3', '#03A9F4'],
+                    ['#9C27B0', '#E91E63'],
+                    ['#FF9800', '#FFC107'],
+                    ['#E91E63', '#F06292'],
+                    ['#00BCD4', '#80DEEA']
+                ];
+                const headColor = colors[skinIndex][0];
+                const bodyColor = colors[skinIndex][1];
+                ctx.fillStyle = index === 0 ? headColor : bodyColor;
+            }
+            
+            ctx.fillRect(segment.x, segment.y, gridSize - 1, gridSize - 1);
+        });
+        
+        // Отрисовка еды
+        ctx.fillStyle = '#FF5722';
+        ctx.beginPath();
+        ctx.arc(food.x + gridSize/2, food.y + gridSize/2, gridSize/2 - 1, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Обработчик для кнопки магазина
+    shopBtn.addEventListener('click', showShopModal);
+
+    // Функция показа магазина
+    function showShopModal() {
+        if (!currentUser.id) {
+            showToast('Нужно подключение к интернету');
+            return;
+        }
+        
+        updateCoinsDisplay();
+        renderShopItems();
+        shopModal.style.display = 'flex';
+    }
+
+    // Остальные функции (renderShopItems, handleShopItemClick, и т.д.) остаются без изменений
+    // ... (вставьте сюда остальные функции из вашего предыдущего кода)
+
+    // ========== ИНИЦИАЛИЗАЦИЯ ==========
+    async function init() {
+        // Настройка обработчиков событий для кнопок
+        playBtn.addEventListener('click', startGame);
+        leaderboardBtn.addEventListener('click', showFullLeaderboard);
+        howToPlayBtn.addEventListener('click', () => howToPlayModal.style.display = 'flex');
+        profileBtn.addEventListener('click', showProfileModal);
+        
+        // Обработчики закрытия модальных окон
+        closeHowToPlayBtn.addEventListener('click', () => howToPlayModal.style.display = 'none');
+        closeLeaderboardBtn.addEventListener('click', () => leaderboardModal.style.display = 'none');
+        document.querySelectorAll('.close-modal-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                btn.closest('.modal').style.display = 'none';
+            });
+        });
+        
+        // Игровые кнопки
+        restartBtn.addEventListener('click', startGame);
+        menuBtn.addEventListener('click', returnToMenu);
+        
+        // Профиль
+        profileSaveBtn.addEventListener('click', updateProfile);
+        setupProfileOptions();
+        initMenuButtons();
+        
+        // Инициализация размеров canvas
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Инициализация кастомизации
+        initColorPalette();
+        initFileUploads();
+        
+        // Проверка соединения с Firebase
+        db.ref('.info/connected').on('value', async (snap) => {
+            if (snap.val() === true) {
+                console.log("Connected to Firebase");
+                await identifyUser();
+                await loadProfileSettings();
+                applyCustomBackground();
+                loadLeaderboard(topPlayersList, 5);
+                
+                if (currentUser.id && !currentUser.id.startsWith('local_')) {
+                    await loadInventory();
+                }
+            } else {
+                console.log("Disconnected from Firebase");
+                setupOfflineUser();
+                userSettings = { 
+                    avatar: 1, 
+                    background: 1, 
+                    skin: 1,
+                    coins: 0,
+                    inventory: {
+                        avatars: [1],
+                        backgrounds: [1],
+                        skins: [1]
+                    },
+                    unlockedItems: {
+                        avatars: [1],
+                        backgrounds: [1],
+                        skins: [1]
+                    }
+                };
+                applyCustomBackground();
+            }
+        });
+        
+        // Закрытие модальных окон по клику вне контента
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        });
+        
+        // Настройка вкладок магазина
+        setupShopTabs();
+    }
+  
 // Загрузка настроек профиля
 async function loadProfileSettings() {
     if (!currentUser.id || currentUser.id.startsWith('local_')) return;
@@ -1202,122 +1121,85 @@ async function updateProfile() {
 
         // ========== ИНИЦИАЛИЗАЦИЯ ==========
         async function init() {
-    // Настройка обработчиков событий для кнопок
-    playBtn.addEventListener('click', startGame);
-    leaderboardBtn.addEventListener('click', showFullLeaderboard);
-    howToPlayBtn.addEventListener('click', () => howToPlayModal.style.display = 'flex');
-    document.getElementById('shop-btn').addEventListener('click', () => {
-        document.getElementById('coins-amount').textContent = userSettings.coins;
-        shopModal.style.display = 'flex';
-    });
-    profileBtn.addEventListener('click', showProfileModal);
-    
-    // Обработчики закрытия модальных окон
-    closeHowToPlayBtn.addEventListener('click', () => howToPlayModal.style.display = 'none');
-    closeLeaderboardBtn.addEventListener('click', () => leaderboardModal.style.display = 'none');
-    document.querySelectorAll('.close-modal-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            btn.closest('.modal').style.display = 'none';
+        // Настройка обработчиков событий для кнопок
+        playBtn.addEventListener('click', startGame);
+        leaderboardBtn.addEventListener('click', showFullLeaderboard);
+        howToPlayBtn.addEventListener('click', () => howToPlayModal.style.display = 'flex');
+        profileBtn.addEventListener('click', showProfileModal);
+        
+        // Обработчики закрытия модальных окон
+        closeHowToPlayBtn.addEventListener('click', () => howToPlayModal.style.display = 'none');
+        closeLeaderboardBtn.addEventListener('click', () => leaderboardModal.style.display = 'none');
+        document.querySelectorAll('.close-modal-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                btn.closest('.modal').style.display = 'none';
+            });
         });
-    });
-    
-    // Игровые кнопки
-    restartBtn.addEventListener('click', startGame);
-    menuBtn.addEventListener('click', returnToMenu);
-    
-    // Профиль
-    profileSaveBtn.addEventListener('click', updateProfile);
-    setupProfileOptions();
-    initMenuButtons();
-    
-    // Инициализация размеров canvas
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-    
-    // Проверка соединения с Firebase
-    db.ref('.info/connected').on('value', async (snap) => {
-        if (snap.val() === true) {
-            console.log("Connected to Firebase");
-            await identifyUser();
-            await loadProfileSettings();
-            applyProfileBackground();
-            loadLeaderboard(topPlayersList, 5);
-            
-            if (currentUser.id && !currentUser.id.startsWith('local_')) {
-                await loadInventory();
-            }
-        } else {
-            console.log("Disconnected from Firebase");
-            setupOfflineUser();
-            userSettings = { 
-                avatar: 1, 
-                background: 1, 
-                snakeSkin: 1,
-                coins: 0,
-                inventory: {
-                    avatars: [1],
-                    backgrounds: [1],
-                    snakeSkins: [1]
-                },
-                unlockedItems: {
-                    avatars: [1],
-                    backgrounds: [1],
-                    snakeSkins: [1]
+        
+        // Игровые кнопки
+        restartBtn.addEventListener('click', startGame);
+        menuBtn.addEventListener('click', returnToMenu);
+        
+        // Профиль
+        profileSaveBtn.addEventListener('click', updateProfile);
+        setupProfileOptions();
+        initMenuButtons();
+        
+        // Инициализация размеров canvas
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Инициализация кастомизации
+        initColorPalette();
+        initFileUploads();
+        
+        // Проверка соединения с Firebase
+        db.ref('.info/connected').on('value', async (snap) => {
+            if (snap.val() === true) {
+                console.log("Connected to Firebase");
+                await identifyUser();
+                await loadProfileSettings();
+                applyCustomBackground();
+                loadLeaderboard(topPlayersList, 5);
+                
+                if (currentUser.id && !currentUser.id.startsWith('local_')) {
+                    await loadInventory();
                 }
-            };
-            applyProfileBackground();
-        }
-    });
-            initColorPalette();
-            initFileUploads();
-    
-    // Закрытие модальных окон по клику вне контента
-    document.querySelectorAll('.modal').forEach(modal => {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                modal.style.display = 'none';
-            }
-        });
-    });
-    
-    // Настройка вкладок магазина
-    setupShopTabs();
-    document.querySelectorAll('.shop-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            // Убираем активный класс у всех вкладок
-            document.querySelectorAll('.shop-tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.shop-tab-content').forEach(c => c.classList.remove('active'));
-            
-            // Добавляем активный класс текущей вкладке
-            tab.classList.add('active');
-            const tabContent = document.getElementById(`shop-${tab.dataset.tab}`);
-            if (tabContent) {
-                tabContent.classList.add('active');
             } else {
-                console.error(`Элемент shop-${tab.dataset.tab} не найден`);
+                console.log("Disconnected from Firebase");
+                setupOfflineUser();
+                userSettings = { 
+                    avatar: 1, 
+                    background: 1, 
+                    skin: 1,
+                    coins: 0,
+                    inventory: {
+                        avatars: [1],
+                        backgrounds: [1],
+                        skins: [1]
+                    },
+                    unlockedItems: {
+                        avatars: [1],
+                        backgrounds: [1],
+                        skins: [1]
+                    }
+                };
+                applyCustomBackground();
             }
         });
-    });
-    
-    // Инициализация игры с настройками по умолчанию
-    userSettings = userSettings || { 
-        avatar: 1, 
-        background: 1, 
-        snakeSkin: 1,
-        coins: 0,
-        inventory: {
-            avatars: [1],
-            backgrounds: [1],
-            snakeSkins: [1]
-        },
-        unlockedItems: {
-            avatars: [1],
-            backgrounds: [1],
-            snakeSkins: [1]
-        }
-    };
-}
-
+        
+        // Закрытие модальных окон по клику вне контента
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        });
+        
+        // Настройка вкладок магазина
+        setupShopTabs();
+    }
             
         // ========== ФУНКЦИИ ИНТЕРФЕЙСAAAAAAAAAAAAAAAAAAAAAAAAAAAА ==========
         // Загрузка настроек профиля
