@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Змейка32</title>
+    <title>Змейка33</title>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
@@ -489,8 +489,34 @@
 }
 
 .shop-item.unlocked {
-    border-color: #4CAF50;
-    background-color: rgba(76, 175, 80, 0.1);
+    border: 2px solid #4CAF50;
+    background: rgba(76, 175, 80, 0.1);
+    position: relative;
+}
+
+.shop-item.unlocked::after {
+    content: '✓';
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: #4CAF50;
+    color: white;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.avatar-option, .background-option, .snake-skin-option {
+    transition: all 0.3s ease;
+}
+
+.avatar-option:hover, .background-option:hover, .snake-skin-option:hover {
+    transform: scale(1.05);
 }
 
 .item-name {
@@ -1300,6 +1326,11 @@ function applyProfileSettings() {
     profileIdSpan.textContent = currentUser.id.substring(0, 8) + '...';
     profileNameInput.value = currentUser.display_name;
 
+    updateProfileSelection();
+    
+    // Применяем текущие настройки
+    applyProfileBackground();
+
     // Очищаем сетки
     document.querySelector('.avatar-grid').innerHTML = '';
     document.querySelector('.background-grid').innerHTML = '';
@@ -1335,6 +1366,7 @@ function applyProfileSettings() {
     });
 
     profileModal.style.display = 'flex';
+            updateProfileSelection();
 }
 
 
@@ -2033,6 +2065,7 @@ function renderShopItems() {
                 itemEl.style.justifyContent = 'center';
                 itemEl.style.color = 'white';
                 itemEl.style.fontWeight = 'bold';
+                itemEl.style.fontSize = '1.2rem';
             } else if (category.key === 'backgrounds') {
                 itemEl.classList.add(`profile-bg-${item.id}`);
             } else if (category.key === 'skins') {
@@ -2045,19 +2078,14 @@ function renderShopItems() {
             nameEl.textContent = item.name;
             itemEl.appendChild(nameEl);
 
-            // Добавляем цену, если предмет не разблокирован
+            // Добавляем цену ТОЛЬКО если предмет не разблокирован
             if (!isUnlocked) {
                 const priceTag = document.createElement('div');
                 priceTag.className = 'price-tag';
                 priceTag.textContent = `${item.price} 🪙`;
                 itemEl.appendChild(priceTag);
-            } else {
-                const ownedTag = document.createElement('div');
-                ownedTag.className = 'price-tag';
-                ownedTag.textContent = 'Куплено';
-                ownedTag.style.background = '#4CAF50';
-                itemEl.appendChild(ownedTag);
             }
+            // Если разблокирован - не показываем цену вообще
 
             // Обработчик клика
             itemEl.addEventListener('click', () => handleShopItemClick(category.key, item));
@@ -2147,6 +2175,7 @@ async function handleShopItemClick(category, item) {
             
             applyProfileSettings();
             renderShopItems();
+            updateProfileSelection(); // ОБНОВЛЯЕМ ВЫБОР В ПРОФИЛЕ
             await saveProfileSettings();
             showToast(`${item.name} выбран!`);
         } else {
@@ -2170,6 +2199,7 @@ async function handleShopItemClick(category, item) {
                     await saveProfileSettings();
                     updateCoinsDisplay();
                     renderShopItems();
+                    updateProfileSelection(); // ОБНОВЛЯЕМ ВЫБОР В ПРОФИЛЕ
                     applyProfileSettings();
                     showToast(`${item.name} куплен и выбран!`);
                 }
@@ -2385,6 +2415,75 @@ function initUserSettings() {
     if (!userSettings.unlockedItems.snakeSkins) userSettings.unlockedItems.snakeSkins = ["1"];
 }
 
+        function updateProfileSelection() {
+    // ОБНОВЛЯЕМ АВАТАРЫ В ПРОФИЛЕ
+    const avatarGrid = document.querySelector('.avatar-grid');
+    if (avatarGrid) {
+        avatarGrid.innerHTML = '';
+        
+        // Создаем варианты аватаров из разблокированных
+        const unlockedAvatars = userSettings.unlockedItems?.avatars || ["1"];
+        unlockedAvatars.forEach(avatarId => {
+            const avatarOption = document.createElement('div');
+            avatarOption.className = `avatar-option ${userSettings.avatar == avatarId ? 'selected' : ''}`;
+            avatarOption.dataset.avatar = avatarId;
+            avatarOption.textContent = avatarId;
+            avatarOption.style.background = getAvatarColor(parseInt(avatarId));
+            
+            avatarOption.addEventListener('click', function() {
+                document.querySelectorAll('.avatar-option').forEach(opt => opt.classList.remove('selected'));
+                this.classList.add('selected');
+                userSettings.avatar = parseInt(this.dataset.avatar);
+            });
+            
+            avatarGrid.appendChild(avatarOption);
+        });
+    }
+    
+    // ОБНОВЛЯЕМ ФОНЫ В ПРОФИЛЕ
+    const backgroundGrid = document.querySelector('.background-grid');
+    if (backgroundGrid) {
+        backgroundGrid.innerHTML = '';
+        
+        const unlockedBackgrounds = userSettings.unlockedItems?.backgrounds || ["1"];
+        unlockedBackgrounds.forEach(bgId => {
+            const bgOption = document.createElement('div');
+            bgOption.className = `background-option profile-bg-${bgId} ${userSettings.background == bgId ? 'selected' : ''}`;
+            bgOption.dataset.bg = bgId;
+            
+            bgOption.addEventListener('click', function() {
+                document.querySelectorAll('.background-option').forEach(opt => opt.classList.remove('selected'));
+                this.classList.add('selected');
+                userSettings.background = parseInt(this.dataset.bg);
+                applyProfileBackground();
+            });
+            
+            backgroundGrid.appendChild(bgOption);
+        });
+    }
+    
+    // ОБНОВЛЯЕМ СКИНЫ ЗМЕЙКИ В ПРОФИЛЕ
+    const skinGrid = document.querySelector('.snake-skin-grid');
+    if (skinGrid) {
+        skinGrid.innerHTML = '';
+        
+        const unlockedSkins = userSettings.unlockedItems?.snakeSkins || ["1"];
+        unlockedSkins.forEach(skinId => {
+            const skinOption = document.createElement('div');
+            skinOption.className = `snake-skin-option snake-color-${skinId} ${userSettings.snakeSkin == skinId ? 'selected' : ''}`;
+            skinOption.dataset.skin = skinId;
+            
+            skinOption.addEventListener('click', function() {
+                document.querySelectorAll('.snake-skin-option').forEach(opt => opt.classList.remove('selected'));
+                this.classList.add('selected');
+                userSettings.snakeSkin = parseInt(this.dataset.skin);
+                if (gameActive) draw();
+            });
+            
+            skinGrid.appendChild(skinOption);
+        });
+    }
+}
 // Вызывайте эту функцию при изменении баланса
 
 
