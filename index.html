@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Змейка421</title>
+    <title>Змейка422</title>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
@@ -325,6 +325,20 @@
     const leaderboardModal = document.getElementById('leaderboard-modal');
     const shopModal = document.getElementById('shop-modal');
 
+    // ========== ЭЛЕМЕНТЫ ИНТЕРФЕЙСА ==========
+    const mainMenu = document.getElementById('main-menu');
+    const playBtn = document.getElementById('play-btn');
+    const leaderboardBtn = document.getElementById('leaderboard-btn');
+    const howToPlayBtn = document.getElementById('how-to-play-btn');
+    const profileBtn = document.getElementById('profile-btn');
+    const shopBtn = document.getElementById('shop-btn');
+    
+    // ДОБАВЬТЕ ЭТУ СТРОКУ:
+    const closeHowToPlayBtn = document.getElementById('close-how-to-play');
+    const closeLeaderboardBtn = document.getElementById('close-leaderboard');
+    
+    const gameContainer = document.getElementById('game-container');
+// ... остальные переменные
     // Элементы профиля
     const profileNameInput = document.getElementById('profile-name-input');
     const profileIdSpan = document.getElementById('profile-id');
@@ -390,28 +404,78 @@
     };
 
     // ========== ОСНОВНЫЕ ФУНКЦИИ ==========
-    async function init() {
-        console.log("Инициализация игры...");
-        
-        // Настройка обработчиков событий
-        setupEventListeners();
-        
-        // Инициализация размеров canvas
-        resizeCanvas();
-        window.addEventListener('resize', resizeCanvas);
-        
-        // Инициализация пользователя
-        await identifyUser();
-        
-        // Применяем настройки по умолчанию
-        applyProfileSettings();
-        
-        // Загружаем таблицу лидеров
-        loadLeaderboard(topPlayersList, 5);
-        
-        console.log("Игра инициализирована");
-    }
-
+    // ========== ИНИЦИАЛИЗАЦИЯ ==========
+async function init() {
+    // Настройка обработчиков событий для кнопок
+    playBtn.addEventListener('click', startGame);
+    leaderboardBtn.addEventListener('click', showFullLeaderboard);
+    howToPlayBtn.addEventListener('click', () => howToPlayModal.style.display = 'flex');
+    profileBtn.addEventListener('click', showProfileModal);
+    shopBtn.addEventListener('click', showShopModal);
+    
+    // Обработчики закрытия модальных окон
+    // ИСПРАВЛЕННАЯ СТРОКА - используем правильный ID
+    document.getElementById('close-how-to-play').addEventListener('click', () => howToPlayModal.style.display = 'none');
+    document.getElementById('close-leaderboard').addEventListener('click', () => leaderboardModal.style.display = 'none');
+    document.querySelectorAll('.close-modal-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            btn.closest('.modal').style.display = 'none';
+        });
+    });
+    
+    // Игровые кнопки
+    restartBtn.addEventListener('click', startGame);
+    menuBtn.addEventListener('click', returnToMenu);
+    
+    // Профиль
+    profileSaveBtn.addEventListener('click', updateProfile);
+    
+    // Инициализация размеров canvas
+    resizeCanvas();
+    window.addEventListener('resize', resizeCanvas);
+    
+    // Инициализация кастомизации
+    initColorPalette();
+    initFileUploads();
+    
+    // Проверка соединения с Firebase
+    db.ref('.info/connected').on('value', async (snap) => {
+        if (snap.val() === true) {
+            console.log("Connected to Firebase");
+            await identifyUser();
+            await loadProfileSettings();
+            applyCustomBackground();
+            loadLeaderboard(topPlayersList, 5);
+        } else {
+            console.log("Disconnected from Firebase");
+            setupOfflineUser();
+            userSettings = { 
+                avatar: 1, 
+                background: 1, 
+                skin: 1,
+                coins: 0,
+                unlockedItems: {
+                    avatars: ["1"],
+                    backgrounds: ["1"],
+                    skins: ["1"]
+                }
+            };
+            applyCustomBackground();
+        }
+    });
+    
+    // Закрытие модальных окон по клику вне контента
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    });
+    
+    // Настройка вкладок магазина
+    setupShopTabs();
+}
     function setupEventListeners() {
         // Основные кнопки
         playBtn.addEventListener('click', startGame);
