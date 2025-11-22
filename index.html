@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Змейка1488</title>
+    <title>Змейка14888</title>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
@@ -1195,8 +1195,8 @@
             // Сброс состояния
             snake = [];
             food = {};
-            direction = 'none';
-            nextDirection = 'none';
+            direction = 'right'; // Начальное направление
+            nextDirection = 'right';
             score = 0;
             gameSpeed = 150;
             gameActive = true;
@@ -1217,6 +1217,10 @@
             // Запуск игрового цикла
             clearInterval(gameLoop);
             gameLoop = setInterval(gameStep, gameSpeed);
+            
+            // Автообновление таблицы лидеров каждые 30 секунд
+            if (refreshInterval) clearInterval(refreshInterval);
+            refreshInterval = setInterval(() => loadLeaderboard(topPlayersList, 5), 30000);
         }
 
         function initSnake() {
@@ -1224,6 +1228,7 @@
             const startY = Math.floor(canvas.height / gridSize / 2) * gridSize;
             
             snake = [];
+            // Создаем змейку, которая изначально смотрит вправо
             for (let i = 3; i >= 0; i--) {
                 snake.push({ x: startX - i * gridSize, y: startY });
             }
@@ -1512,48 +1517,74 @@
         }
 
         function setupControls() {
-            // Клавиатура
-            document.addEventListener('keydown', (e) => {
-                if (!gameActive) return;
-                
-                switch (e.key.toLowerCase()) {
-                    case 'w': case 'arrowup': handleInput('up'); break;
-                    case 's': case 'arrowdown': handleInput('down'); break;
-                    case 'a': case 'arrowleft': handleInput('left'); break;
-                    case 'd': case 'arrowright': handleInput('right'); break;
-                }
-            });
-            
-            // Свайпы
-            let touchStartX = 0, touchStartY = 0;
-            const SWIPE_THRESHOLD = 30;
-
-            canvas.addEventListener('touchstart', (e) => {
-                if (!gameActive) return;
-                const touch = e.touches[0];
-                touchStartX = touch.clientX;
-                touchStartY = touch.clientY;
-            });
-
-            canvas.addEventListener('touchend', (e) => {
-                if (!gameActive) return;
-                const touch = e.changedTouches[0];
-                const diffX = touchStartX - touch.clientX;
-                const diffY = touchStartY - touch.clientY;
-                
-                if (Math.abs(diffX) > Math.abs(diffY)) {
-                    if (diffX > SWIPE_THRESHOLD) handleInput('left');
-                    else if (diffX < -SWIPE_THRESHOLD) handleInput('right');
-                } else {
-                    if (diffY > SWIPE_THRESHOLD) handleInput('up');
-                    else if (diffY < -SWIPE_THRESHOLD) handleInput('down');
-                }
-            });
+    // Клавиатура
+    document.addEventListener('keydown', (e) => {
+        if (!gameActive) return;
+        
+        switch (e.key.toLowerCase()) {
+            case 'w': case 'arrowup': 
+                e.preventDefault();
+                handleInput('up'); 
+                break;
+            case 's': case 'arrowdown': 
+                e.preventDefault();
+                handleInput('down'); 
+                break;
+            case 'a': case 'arrowleft': 
+                e.preventDefault();
+                handleInput('left'); 
+                break;
+            case 'd': case 'arrowright': 
+                e.preventDefault();
+                handleInput('right'); 
+                break;
         }
+    });
+    
+    // Свайпы
+    let touchStartX = 0, touchStartY = 0;
+    const SWIPE_THRESHOLD = 30;
+
+    canvas.addEventListener('touchstart', (e) => {
+        if (!gameActive) return;
+        e.preventDefault();
+        const touch = e.touches[0];
+        touchStartX = touch.clientX;
+        touchStartY = touch.clientY;
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+        if (!gameActive) return;
+        e.preventDefault();
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (e) => {
+        if (!gameActive) return;
+        e.preventDefault();
+        const touch = e.changedTouches[0];
+        const diffX = touchStartX - touch.clientX;
+        const diffY = touchStartY - touch.clientY;
+        
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+            // Горизонтальный свайп
+            if (Math.abs(diffX) > SWIPE_THRESHOLD) {
+                if (diffX > 0) handleInput('left');
+                else handleInput('right');
+            }
+        } else {
+            // Вертикальный свайп
+            if (Math.abs(diffY) > SWIPE_THRESHOLD) {
+                if (diffY > 0) handleInput('up');
+                else handleInput('down');
+            }
+        }
+    }, { passive: false });
+}
 
         function handleInput(newDirection) {
             if (!gameActive) return;
             
+            // Запрет на разворот на 180 градусов
             if (
                 (newDirection === 'up' && direction !== 'down') ||
                 (newDirection === 'down' && direction !== 'up') ||
@@ -1885,6 +1916,59 @@
                 }
             });
         }
+
+        function update() {
+    // Сначала обновляем направление на следующее
+    if (nextDirection !== 'none') {
+        direction = nextDirection;
+    }
+    
+    if (direction === 'none') return;
+    
+    const head = { ...snake[0] };
+    
+    // Движение головы
+    switch (direction) {
+        case 'up': head.y -= gridSize; break;
+        case 'down': head.y += gridSize; break;
+        case 'left': head.x -= gridSize; break;
+        case 'right': head.x += gridSize; break;
+    }
+    
+    // Проверка столкновений с границами
+    if (head.x < 0 || head.y < 0 || head.x >= canvas.width || head.y >= canvas.height) {
+        gameOver();
+        return;
+    }
+    
+    // Проверка столкновений с собой
+    for (let i = 1; i < snake.length; i++) {
+        if (snake[i].x === head.x && snake[i].y === head.y) {
+            gameOver();
+            return;
+        }
+    }
+    
+    // Добавление новой головы
+    snake.unshift(head);
+    
+    // Проверка съедания еды
+    if (head.x === food.x && head.y === food.y) {
+        score += 10;
+        scoreElement.textContent = score;
+        
+        // Увеличение скорости каждые 50 очков
+        if (score % 50 === 0 && gameSpeed > 50) {
+            gameSpeed -= 10;
+            clearInterval(gameLoop);
+            gameLoop = setInterval(gameStep, gameSpeed);
+        }
+        
+        generateFood();
+    } else {
+        snake.pop(); // Удаление хвоста, если не съели еду
+    }
+}
 
         // Запуск игры при загрузке страницы
         window.addEventListener('load', init);
