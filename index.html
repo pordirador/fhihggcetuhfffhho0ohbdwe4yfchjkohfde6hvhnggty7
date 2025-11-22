@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Змейка14888</title>
+    <title>Змейка1488</title>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
@@ -926,6 +926,10 @@
             
             // Настройка обработчиков событий
             setupEventListeners();
+            // В начале функции init() добавьте:
+            window.addEventListener('load', function() {
+                setTimeout(init, 100); // Небольшая задержка для полной загрузки DOM
+            });
             
             // Инициализация размеров canvas
             resizeCanvas();
@@ -1187,76 +1191,98 @@
 
         // ========== ИГРОВЫЕ ФУНКЦИИ ==========
         function resizeCanvas() {
-            canvas.width = gameContainer.offsetWidth;
-            canvas.height = gameContainer.offsetHeight;
-        }
+    const container = gameContainer;
+    canvas.width = container.offsetWidth;
+    canvas.height = container.offsetHeight;
+    
+    // Округляем до размера, кратного gridSize
+    canvas.width = Math.floor(canvas.width / gridSize) * gridSize;
+    canvas.height = Math.floor(canvas.height / gridSize) * gridSize;
+    
+    console.log("Canvas resized to:", canvas.width, "x", canvas.height);
+}
 
         function startGame() {
-            // Сброс состояния
-            snake = [];
-            food = {};
-            direction = 'right'; // Начальное направление
-            nextDirection = 'right';
-            score = 0;
-            gameSpeed = 150;
-            gameActive = true;
-            
-            // Обновление интерфейса
-            mainMenu.style.display = "none";
-            gameContainer.style.display = "block";
-            gameOverElement.style.display = "none";
-            document.getElementById('leaderboard').style.display = 'block';
-            scoreElement.textContent = score;
-            
-            // Инициализация игры
-            resizeCanvas();
-            initSnake();
-            generateFood();
-            draw();
-            
-            // Запуск игрового цикла
-            clearInterval(gameLoop);
-            gameLoop = setInterval(gameStep, gameSpeed);
-            
-            // Автообновление таблицы лидеров каждые 30 секунд
-            if (refreshInterval) clearInterval(refreshInterval);
-            refreshInterval = setInterval(() => loadLeaderboard(topPlayersList, 5), 30000);
-        }
+    // Сброс состояния
+    snake = [];
+    food = {};
+    direction = 'right'; // Начальное направление
+    nextDirection = 'right';
+    score = 0;
+    gameSpeed = 150;
+    gameActive = true;
+    
+    // Обновление интерфейса
+    mainMenu.style.display = "none";
+    gameContainer.style.display = "block";
+    gameOverElement.style.display = "none";
+    document.getElementById('leaderboard').style.display = 'block';
+    scoreElement.textContent = score;
+    
+    // Инициализация игры
+    resizeCanvas();
+    initSnake();
+    generateFood();
+    draw();
+    
+    // Запуск игрового цикла
+    clearInterval(gameLoop);
+    gameLoop = setInterval(gameStep, gameSpeed);
+}
 
         function initSnake() {
-            const startX = Math.floor(canvas.width / gridSize / 2) * gridSize;
-            const startY = Math.floor(canvas.height / gridSize / 2) * gridSize;
-            
-            snake = [];
-            // Создаем змейку, которая изначально смотрит вправо
-            for (let i = 3; i >= 0; i--) {
-                snake.push({ x: startX - i * gridSize, y: startY });
-            }
-        }
+    const startX = Math.floor(canvas.width / gridSize / 2) * gridSize;
+    const startY = Math.floor(canvas.height / gridSize / 2) * gridSize;
+    
+    snake = [];
+    // Создаем змейку из 4 сегментов, направленную вправо
+    for (let i = 3; i >= 0; i--) {
+        snake.push({ 
+            x: startX - i * gridSize, 
+            y: startY 
+        });
+    }
+    
+    console.log("Змейка инициализирована:", snake);
+    console.log("Размер canvas:", canvas.width, "x", canvas.height);
+}
 
         function generateFood() {
-            const maxX = Math.floor(canvas.width / gridSize) - 1;
-            const maxY = Math.floor(canvas.height / gridSize) - 1;
-            
-            let validPosition = false;
-            let attempts = 0;
-            
-            while (!validPosition && attempts < 100) {
-                food = {
-                    x: Math.floor(Math.random() * maxX) * gridSize,
-                    y: Math.floor(Math.random() * maxY) * gridSize
-                };
-                
-                validPosition = true;
-                for (let segment of snake) {
-                    if (segment.x === food.x && segment.y === food.y) {
-                        validPosition = false;
-                        break;
-                    }
-                }
-                attempts++;
+    const maxX = Math.floor(canvas.width / gridSize);
+    const maxY = Math.floor(canvas.height / gridSize);
+    
+    let validPosition = false;
+    let attempts = 0;
+    
+    while (!validPosition && attempts < 100) {
+        food = {
+            x: Math.floor(Math.random() * maxX) * gridSize,
+            y: Math.floor(Math.random() * maxY) * gridSize
+        };
+        
+        validPosition = true;
+        
+        // Проверяем, не попадает ли еда на змейку
+        for (let segment of snake) {
+            if (segment.x === food.x && segment.y === food.y) {
+                validPosition = false;
+                break;
             }
         }
+        
+        attempts++;
+    }
+    
+    // Если не нашли валидную позицию, ставим еду в случайное место
+    if (!validPosition) {
+        food = {
+            x: Math.floor(Math.random() * maxX) * gridSize,
+            y: Math.floor(Math.random() * maxY) * gridSize
+        };
+    }
+    
+    console.log("Еда сгенерирована:", food);
+}
 
         function draw() {
             // Очистка canvas
@@ -1935,8 +1961,12 @@
         case 'right': head.x += gridSize; break;
     }
     
+    console.log("Новая позиция головы:", head);
+    console.log("Границы canvas:", canvas.width, canvas.height);
+    
     // Проверка столкновений с границами
     if (head.x < 0 || head.y < 0 || head.x >= canvas.width || head.y >= canvas.height) {
+        console.log("Столкновение с границей!");
         gameOver();
         return;
     }
@@ -1944,6 +1974,7 @@
     // Проверка столкновений с собой
     for (let i = 1; i < snake.length; i++) {
         if (snake[i].x === head.x && snake[i].y === head.y) {
+            console.log("Столкновение с собой!");
             gameOver();
             return;
         }
