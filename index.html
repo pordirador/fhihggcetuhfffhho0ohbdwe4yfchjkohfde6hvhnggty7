@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Змейка</title>
+    <title>Змейка1488</title>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
@@ -987,6 +987,48 @@
             // Кастомизация
             initColorPalette();
             initFileUploads();
+            
+            // Обработчики выбора в профиле
+            setupProfileSelection();
+        }
+
+        function setupProfileSelection() {
+            // Аватары
+            document.querySelectorAll('.avatar-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    const avatarNum = parseInt(this.dataset.avatar);
+                    if (userSettings.unlockedItems.avatars.includes(avatarNum.toString())) {
+                        document.querySelectorAll('.avatar-option').forEach(el => el.classList.remove('selected'));
+                        this.classList.add('selected');
+                        userSettings.avatar = avatarNum;
+                    }
+                });
+            });
+            
+            // Фоны
+            document.querySelectorAll('.background-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    const bgNum = parseInt(this.dataset.bg);
+                    if (userSettings.unlockedItems.backgrounds.includes(bgNum.toString())) {
+                        document.querySelectorAll('.background-option').forEach(el => el.classList.remove('selected'));
+                        this.classList.add('selected');
+                        userSettings.background = bgNum;
+                        applyProfileBackground();
+                    }
+                });
+            });
+            
+            // Скины змейки
+            document.querySelectorAll('.snake-skin-option').forEach(option => {
+                option.addEventListener('click', function() {
+                    const skinNum = parseInt(this.dataset.skin);
+                    if (userSettings.unlockedItems.snakeSkins.includes(skinNum.toString())) {
+                        document.querySelectorAll('.snake-skin-option').forEach(el => el.classList.remove('selected'));
+                        this.classList.add('selected');
+                        userSettings.snakeSkin = skinNum;
+                    }
+                });
+            });
         }
 
         // ========== ПРОФИЛЬ И НАСТРОЙКИ ==========
@@ -1050,13 +1092,26 @@
 
         function applyProfileSettings() {
             // Применяем фон
-            applyCustomBackground();
+            applyProfileBackground();
             
             // Обновляем монеты
             updateCoinsDisplay();
             
             // Обновляем выбранные элементы в профиле
             updateProfileSelection();
+        }
+
+        function applyProfileBackground() {
+            if (userSettings.customBackground) {
+                document.body.style.backgroundImage = `url(${userSettings.customBackground})`;
+                document.body.style.backgroundSize = 'cover';
+                document.body.style.backgroundPosition = 'center';
+                document.body.style.backgroundRepeat = 'no-repeat';
+            } else {
+                document.body.style.backgroundImage = '';
+                document.body.className = '';
+                document.body.classList.add(`profile-bg-${userSettings.background}`);
+            }
         }
 
         function updateProfileSelection() {
@@ -1274,6 +1329,9 @@
             } else {
                 snake.pop();
             }
+            
+            // Обновляем направление
+            direction = nextDirection;
         }
 
         function gameStep() {
@@ -1514,6 +1572,7 @@
                 return true;
             } catch (error) {
                 console.error('Ошибка сохранения настроек:', error);
+                showToast('Ошибка сохранения. Проверьте правила базы данных Firebase.');
                 return false;
             }
         }
@@ -1817,7 +1876,7 @@
                         backgroundUpload.value = '';
                         
                         // Применяем новый фон
-                        applyCustomBackground();
+                        applyProfileBackground();
                     };
                     reader.readAsDataURL(file);
                 } catch (error) {
@@ -1825,19 +1884,6 @@
                     showToast('Ошибка сохранения фона');
                 }
             });
-        }
-
-        function applyCustomBackground() {
-            if (userSettings.customBackground) {
-                document.body.style.backgroundImage = `url(${userSettings.customBackground})`;
-                document.body.style.backgroundSize = 'cover';
-                document.body.style.backgroundPosition = 'center';
-                document.body.style.backgroundRepeat = 'no-repeat';
-            } else {
-                document.body.style.backgroundImage = '';
-                document.body.className = '';
-                document.body.classList.add(`profile-bg-${userSettings.background}`);
-            }
         }
 
         // Запуск игры при загрузке страницы
