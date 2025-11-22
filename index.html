@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Змейка1488</title>
+    <title>Змейка14888</title>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
@@ -1235,8 +1235,8 @@
     const startY = Math.floor(canvas.height / gridSize / 2) * gridSize;
     
     snake = [];
-    // Создаем змейку из 4 сегментов, направленную вправо
-    for (let i = 3; i >= 0; i--) {
+    // Создаем змейку из 3 сегментов (вместо 4) для уменьшения вероятности столкновения
+    for (let i = 2; i >= 0; i--) {
         snake.push({ 
             x: startX - i * gridSize, 
             y: startY 
@@ -1244,7 +1244,6 @@
     }
     
     console.log("Змейка инициализирована:", snake);
-    console.log("Размер canvas:", canvas.width, "x", canvas.height);
 }
 
         function generateFood() {
