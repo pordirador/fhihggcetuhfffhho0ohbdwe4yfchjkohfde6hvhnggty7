@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Змейка33</title>
+    <title>Змейка69</title>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
@@ -537,6 +537,98 @@
     font-size: 0.7rem;
     font-weight: bold;
 }
+        /* Стили для расширенной палитры цветов */
+.color-palette {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.color-option {
+    aspect-ratio: 1/1;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.2s;
+}
+
+.color-option:hover {
+    transform: scale(1.1);
+}
+
+.color-option.selected {
+    border-color: #333;
+    box-shadow: 0 0 5px rgba(0,0,0,0.5);
+}
+
+.color-option.custom {
+    background: linear-gradient(45deg, #f0f0f0, #ccc);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    color: #666;
+}
+
+/* Стили для загрузки фото */
+.photo-upload-section {
+    margin-top: 15px;
+    padding: 15px;
+    background: #f5f5f5;
+    border-radius: 10px;
+}
+
+.upload-btn {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.upload-preview {
+    width: 100%;
+    max-width: 200px;
+    height: 150px;
+    margin: 10px auto;
+    border: 2px dashed #ccc;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background-size: cover;
+    background-position: center;
+}
+
+.upload-preview.empty::before {
+    content: "Превью";
+    color: #999;
+}
+
+.customization-section {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 10px;
+}
+
+.custom-skin-preview {
+    width: 100px;
+    height: 30px;
+    margin: 10px auto;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-size: cover;
+    background-position: center;
+}
         
         /* Цветовые стили */
         .snake-color-1 { background-color: #4CAF50; }
@@ -602,7 +694,45 @@
             <button class="shop-tab" data-tab="backgrounds">Фоны</button>
             <button class="shop-tab" data-tab="skins">Скины змейки</button>
         </div>
-        
+        <!-- В разделе с вкладками магазина добавьте: -->
+<button class="shop-tab" data-tab="custom">Кастомизация</button>
+
+<!-- В разделе с контентом магазина добавьте: -->
+<div id="shop-custom" class="tab-content">
+    <div class="customization-section">
+        <h3>Расширенная палитра цветов для змейки</h3>
+        <p>Выберите цвет из палитры:</p>
+        <div class="color-palette" id="color-palette"></div>
+    </div>
+    
+    <div class="customization-section">
+        <h3>Загрузите свой скин для змейки</h3>
+        <p>Стоимость: 10 монет</p>
+        <input type="file" id="snake-skin-upload" accept="image/*" style="display: none;">
+        <button class="upload-btn" id="snake-skin-upload-btn">Выбрать изображение</button>
+        <div class="upload-preview empty" id="snake-skin-preview"></div>
+        <div class="custom-skin-preview" id="custom-skin-preview"></div>
+        <button class="menu-btn" id="save-snake-skin-btn" style="display: none;">Сохранить скин (10 монет)</button>
+    </div>
+    
+    <div class="customization-section">
+        <h3>Загрузите свой аватар</h3>
+        <p>Стоимость: 10 монет</p>
+        <input type="file" id="avatar-upload" accept="image/*" style="display: none;">
+        <button class="upload-btn" id="avatar-upload-btn">Выбрать изображение</button>
+        <div class="upload-preview empty" id="avatar-preview"></div>
+        <button class="menu-btn" id="save-avatar-btn" style="display: none;">Сохранить аватар (10 монет)</button>
+    </div>
+    
+    <div class="customization-section">
+        <h3>Загрузите свой фон для игры</h3>
+        <p>Стоимость: 10 монет</p>
+        <input type="file" id="background-upload" accept="image/*" style="display: none;">
+        <button class="upload-btn" id="background-upload-btn">Выбрать изображение</button>
+        <div class="upload-preview empty" id="background-preview"></div>
+        <button class="menu-btn" id="save-background-btn" style="display: none;">Сохранить фон (10 монет)</button>
+    </div>
+</div>
         <div class="shop-content">
             <div id="shop-avatars" class="tab-content active">
                 <div class="items-grid" id="avatars-grid"></div>
@@ -834,6 +964,11 @@ let userSettings = {
         avatars: ["1"],
         backgrounds: ["1"],
         skins: ["1"]
+        customSnakeColor: null,
+    customSnakeSkin: null,
+    customAvatar: null,
+    customBackground: null,
+    customSkins: []
     }
 };
         
@@ -1157,6 +1292,7 @@ async function updateProfile() {
             btn.closest('.modal').style.display = 'none';
         });
     });
+            initCustomization();
     
     // Игровые кнопки
     restartBtn.addEventListener('click', startGame);
@@ -1494,32 +1630,41 @@ function selectSnakeSkin(e) {
     ctx.fillStyle = '#222';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // Цвета для змейки
-    const colors = [
-        ['#4CAF50', '#8BC34A'], // зеленый
-        ['#2196F3', '#03A9F4'], // синий
-        ['#9C27B0', '#E91E63'], // фиолетовый
-        ['#FF9800', '#FFC107'], // оранжевый
-        ['#E91E63', '#F06292'], // розовый
-        ['#00BCD4', '#80DEEA']  // бирюзовый
-    ];
-    
-    const skinIndex = (userSettings.snakeSkin || 1) - 1;
-    const headColor = colors[skinIndex][0];
-    const bodyColor = colors[skinIndex][1];
-    
-    // Отрисовка змейки
-    snake.forEach((segment, index) => {
-        ctx.fillStyle = index === 0 ? headColor : bodyColor;
-        ctx.fillRect(segment.x, segment.y, gridSize - 1, gridSize - 1);
-    });
+    // Проверяем кастомный цвет змейки
+    if (userSettings.customSnakeColor) {
+        // Используем кастомный цвет
+        snake.forEach((segment, index) => {
+            ctx.fillStyle = userSettings.customSnakeColor;
+            ctx.fillRect(segment.x, segment.y, gridSize - 1, gridSize - 1);
+        });
+    } else {
+        // Используем стандартные цвета
+        const colors = [
+            ['#4CAF50', '#8BC34A'],
+            ['#2196F3', '#03A9F4'],
+            ['#9C27B0', '#E91E63'],
+            ['#FF9800', '#FFC107'],
+            ['#E91E63', '#F06292'],
+            ['#00BCD4', '#80DEEA']
+        ];
+        
+        const skinIndex = (userSettings.snakeSkin || 1) - 1;
+        const headColor = colors[skinIndex][0];
+        const bodyColor = colors[skinIndex][1];
+        
+        // Отрисовка змейки
+        snake.forEach((segment, index) => {
+            ctx.fillStyle = index === 0 ? headColor : bodyColor;
+            ctx.fillRect(segment.x, segment.y, gridSize - 1, gridSize - 1);
+        });
+    }
     
     // Отрисовка еды
     ctx.fillStyle = '#FF5722';
     ctx.beginPath();
     ctx.arc(food.x + gridSize/2, food.y + gridSize/2, gridSize/2 - 1, 0, Math.PI * 2);
     ctx.fill();
-} // <- Добавлена закрывающая скобка
+}
 
 function update() {
     // Обновляем направление
@@ -2482,6 +2627,263 @@ function initUserSettings() {
             
             skinGrid.appendChild(skinOption);
         });
+    }
+}
+        // ========== КАСТОМИЗАЦИЯ ==========
+
+// Расширенная палитра цветов
+const extendedColorPalette = [
+    '#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF',
+    '#FFA500', '#800080', '#008000', '#800000', '#008080', '#000080',
+    '#FFC0CB', '#FFD700', '#E6E6FA', '#F5F5DC', '#FA8072', '#20B2AA'
+];
+
+// Инициализация кастомизации
+function initCustomization() {
+    initColorPalette();
+    initFileUploads();
+}
+
+function initColorPalette() {
+    const paletteContainer = document.getElementById('color-palette');
+    if (!paletteContainer) return;
+    
+    paletteContainer.innerHTML = '';
+    
+    // Добавляем стандартные цвета
+    extendedColorPalette.forEach((color, index) => {
+        const colorOption = document.createElement('div');
+        colorOption.className = 'color-option';
+        colorOption.style.backgroundColor = color;
+        colorOption.dataset.color = color;
+        colorOption.dataset.id = index + 100;
+        
+        colorOption.addEventListener('click', function() {
+            selectCustomColor(color, index + 100);
+        });
+        
+        paletteContainer.appendChild(colorOption);
+    });
+    
+    // Добавляем опцию для загрузки своего изображения
+    const customOption = document.createElement('div');
+    customOption.className = 'color-option custom';
+    customOption.title = "Загрузить свой скин";
+    customOption.innerHTML = '+';
+    customOption.addEventListener('click', function() {
+        document.getElementById('snake-skin-upload').click();
+    });
+    
+    paletteContainer.appendChild(customOption);
+}
+
+function selectCustomColor(color, colorId) {
+    userSettings.customSnakeColor = color;
+    userSettings.snakeSkin = colorId;
+    
+    showToast('Цвет змейки изменен!');
+    
+    // Перерисовываем игру, если она активна
+    if (gameActive) draw();
+}
+
+function initFileUploads() {
+    // Загрузка скина для змейки
+    const snakeSkinUpload = document.getElementById('snake-skin-upload');
+    const snakeSkinUploadBtn = document.getElementById('snake-skin-upload-btn');
+    const snakeSkinPreview = document.getElementById('snake-skin-preview');
+    const saveSnakeSkinBtn = document.getElementById('save-snake-skin-btn');
+    
+    snakeSkinUploadBtn.addEventListener('click', () => snakeSkinUpload.click());
+    
+    snakeSkinUpload.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                snakeSkinPreview.style.backgroundImage = `url(${e.target.result})`;
+                snakeSkinPreview.classList.remove('empty');
+                saveSnakeSkinBtn.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    saveSnakeSkinBtn.addEventListener('click', async function() {
+        if (userSettings.coins < 10) {
+            showToast('Недостаточно монет!');
+            return;
+        }
+        
+        const file = snakeSkinUpload.files[0];
+        if (!file) {
+            showToast('Сначала выберите изображение');
+            return;
+        }
+        
+        try {
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const imageData = e.target.result;
+                
+                // Инициализируем customSkins если не существует
+                if (!userSettings.customSkins) userSettings.customSkins = [];
+                
+                userSettings.customSkins.push(imageData);
+                userSettings.coins -= 10;
+                
+                await saveProfileSettings();
+                
+                showToast('Скин сохранен!');
+                updateCoinsDisplay();
+                saveSnakeSkinBtn.style.display = 'none';
+                snakeSkinPreview.classList.add('empty');
+                snakeSkinPreview.style.backgroundImage = '';
+                snakeSkinUpload.value = '';
+            };
+            reader.readAsDataURL(file);
+        } catch (error) {
+            console.error('Ошибка сохранения скина:', error);
+            showToast('Ошибка сохранения скина');
+        }
+    });
+    
+    // Загрузка аватара
+    const avatarUpload = document.getElementById('avatar-upload');
+    const avatarUploadBtn = document.getElementById('avatar-upload-btn');
+    const avatarPreview = document.getElementById('avatar-preview');
+    const saveAvatarBtn = document.getElementById('save-avatar-btn');
+    
+    avatarUploadBtn.addEventListener('click', () => avatarUpload.click());
+    
+    avatarUpload.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                avatarPreview.style.backgroundImage = `url(${e.target.result})`;
+                avatarPreview.classList.remove('empty');
+                saveAvatarBtn.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    saveAvatarBtn.addEventListener('click', async function() {
+        if (userSettings.coins < 10) {
+            showToast('Недостаточно монет!');
+            return;
+        }
+        
+        const file = avatarUpload.files[0];
+        if (!file) {
+            showToast('Сначала выберите изображение');
+            return;
+        }
+        
+        try {
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const imageData = e.target.result;
+                
+                userSettings.customAvatar = imageData;
+                userSettings.coins -= 10;
+                
+                await saveProfileSettings();
+                
+                showToast('Аватар сохранен!');
+                updateCoinsDisplay();
+                saveAvatarBtn.style.display = 'none';
+                avatarPreview.classList.add('empty');
+                avatarPreview.style.backgroundImage = '';
+                avatarUpload.value = '';
+            };
+            reader.readAsDataURL(file);
+        } catch (error) {
+            console.error('Ошибка сохранения аватара:', error);
+            showToast('Ошибка сохранения аватара');
+        }
+    });
+    
+    // Загрузка фона
+    const backgroundUpload = document.getElementById('background-upload');
+    const backgroundUploadBtn = document.getElementById('background-upload-btn');
+    const backgroundPreview = document.getElementById('background-preview');
+    const saveBackgroundBtn = document.getElementById('save-background-btn');
+    
+    backgroundUploadBtn.addEventListener('click', () => backgroundUpload.click());
+    
+    backgroundUpload.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                backgroundPreview.style.backgroundImage = `url(${e.target.result})`;
+                backgroundPreview.classList.remove('empty');
+                saveBackgroundBtn.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    saveBackgroundBtn.addEventListener('click', async function() {
+        if (userSettings.coins < 10) {
+            showToast('Недостаточно монет!');
+            return;
+        }
+        
+        const file = backgroundUpload.files[0];
+        if (!file) {
+            showToast('Сначала выберите изображение');
+            return;
+        }
+        
+        try {
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                const imageData = e.target.result;
+                
+                userSettings.customBackground = imageData;
+                userSettings.coins -= 10;
+                
+                await saveProfileSettings();
+                
+                showToast('Фон сохранен!');
+                updateCoinsDisplay();
+                saveBackgroundBtn.style.display = 'none';
+                backgroundPreview.classList.add('empty');
+                backgroundPreview.style.backgroundImage = '';
+                backgroundUpload.value = '';
+                
+                // Применяем новый фон
+                applyProfileBackground();
+            };
+            reader.readAsDataURL(file);
+        } catch (error) {
+            console.error('Ошибка сохранения фона:', error);
+            showToast('Ошибка сохранения фона');
+        }
+    });
+}
+
+// Обновите функцию applyProfileBackground для поддержки кастомных фонов
+function applyProfileBackground() {
+    // Удаляем все классы фона
+    document.body.classList.remove(
+        'profile-bg-1', 'profile-bg-2', 'profile-bg-3',
+        'profile-bg-4', 'profile-bg-5', 'profile-bg-6'
+    );
+    
+    // Проверяем кастомный фон
+    if (userSettings.customBackground) {
+        document.body.style.backgroundImage = `url(${userSettings.customBackground})`;
+        document.body.style.backgroundSize = 'cover';
+        document.body.style.backgroundPosition = 'center';
+        document.body.style.backgroundRepeat = 'no-repeat';
+    } else {
+        document.body.style.backgroundImage = '';
+        // Добавляем текущий выбранный фон
+        document.body.classList.add(`profile-bg-${userSettings.background}`);
     }
 }
 // Вызывайте эту функцию при изменении баланса
