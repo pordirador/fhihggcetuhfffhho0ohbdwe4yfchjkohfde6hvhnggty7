@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Змейка69</title>
+    <title>Змейка6969</title>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-database-compat.js"></script>
@@ -950,26 +950,22 @@ shopBtn.addEventListener('click', showShopModal);
 // В самом начале скрипта, перед всеми функциями
 // Правильная структура для инвентаря
 // В самом начале скрипта (перед всеми функциями)
+// Настройки профиля
 let userSettings = {
     coins: 0,
     avatar: 1,
     background: 1,
-    skin: 1,
+    snakeSkin: 1,
     unlockedItems: {
         avatars: ["1"],
         backgrounds: ["1"],
-        skins: ["1"]
+        snakeSkins: ["1"]
     },
-    inventory: {
-        avatars: ["1"],
-        backgrounds: ["1"],
-        skins: ["1"]
-        customSnakeSkin: null,
-    customSnakeSkin: null,
+    customSnakeColor: null,
+    customSnakeSkin: null, // Добавлено это свойство
     customAvatar: null,
     customBackground: null,
     customSkins: []
-    }
 };
         
 // Загрузка настроек профиля
@@ -1393,14 +1389,25 @@ async function updateProfile() {
         // ========== ФУНКЦИИ ИНТЕРФЕЙСAAAAAAAAAAAAAAAAAAAAAAAAAAAА ==========
         // Загрузка настроек профиля
 async function loadProfileSettings() {
-    if (!currentUser.id || currentUser.id.startsWith('local_')) return;
+    if (!currentUser.id) return;
     
     try {
         const snapshot = await db.ref(`userSettings/${currentUser.id}`).once('value');
         if (snapshot.exists()) {
-            userSettings = snapshot.val();
-            applyProfileSettings();
+            const data = snapshot.val();
+            // Обновляем только существующие поля
+            if (data.coins !== undefined) userSettings.coins = data.coins;
+            if (data.avatar !== undefined) userSettings.avatar = data.avatar;
+            if (data.background !== undefined) userSettings.background = data.background;
+            if (data.snakeSkin !== undefined) userSettings.snakeSkin = data.snakeSkin;
+            if (data.unlockedItems) userSettings.unlockedItems = data.unlockedItems;
+            if (data.customSnakeColor) userSettings.customSnakeColor = data.customSnakeColor;
+            if (data.customSnakeSkin) userSettings.customSnakeSkin = data.customSnakeSkin; // Добавлено
+            if (data.customAvatar) userSettings.customAvatar = data.customAvatar;
+            if (data.customBackground) userSettings.customBackground = data.customBackground;
+            if (data.customSkins) userSettings.customSkins = data.customSkins;
         }
+        applyProfileSettings();
     } catch (error) {
         console.error('Ошибка загрузки настроек:', error);
     }
@@ -1428,6 +1435,19 @@ function applyProfileSettings() {
     // Показываем ID пользователя
     if (currentUser.id) {
         profileIdSpan.textContent = currentUser.id.substring(0, 8) + '...';
+    }
+    applyProfileBackground();
+    
+    // Обновляем монеты
+    updateCoinsDisplay();
+    
+    // Обновляем выбранные элементы в профиле
+    updateProfileSelection();
+    
+    // Применяем кастомный скин змейки, если он есть
+    if (userSettings.customSnakeSkin) {
+        // Здесь можно добавить логику применения кастомного скина
+        console.log("Кастомный скин змейки загружен");
     }
     
     // Применяем выбранный фон
